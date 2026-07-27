@@ -6,11 +6,15 @@ it's the fastest way to answer "what's actually done" in a future session or an 
 ## Phase 1 — Foundation (train one real model end to end)
 
 - [x] Repo scaffold, architecture docs
-- [ ] Backend core: FastAPI skeleton, config, SQLAlchemy models, Alembic migration for initial schema
-- [ ] `BaseModelPlugin` interface + plugin registry + `plugins/samamba` (real training code) +
-      `plugins/gcn_baseline` (proves the interface is model-agnostic)
-- [ ] Dataset Manager: register/version a dataset, metadata in Postgres, files staged for MinIO
-- [ ] Training Service: Slurm SSH client, job script templating, submit + poll a real job on the HPC cluster
+- [x] Backend core: FastAPI skeleton, config, SQLAlchemy models, Alembic migration for initial schema
+- [x] `BaseModelPlugin` interface + plugin registry + `plugins/samamba` (placeholder model body, real lifecycle) +
+      `plugins/gcn_baseline` (proves the interface is model-agnostic) — both verified end-to-end via `run_train.py`
+- [x] Dataset Manager: dataset/version CRUD + presigned-upload API (backend), versioned in Postgres, files
+      staged for MinIO, plus `scripts/register_dataset.py` for onboarding a real dataset — verified end-to-end
+      against a live backend instance
+- [x] Training Service: Slurm SSH client, job script templating, submit + poll — **verified against the real
+      HPC cluster**: submitted an actual sbatch job to `cse-gpu-all`, watched QUEUED→RUNNING→FINISHED via
+      squeue/sacct, recovered checkpoint + metrics
 - [ ] MLflow integration: every job run logs params/metrics/artifacts
 - [ ] Model Registry: promote a finished run's checkpoint to a versioned model
 - [ ] React frontend: Datasets, Training (submit + live queue), Experiments, Models pages wired to the API
