@@ -31,6 +31,10 @@ def _binary_metrics(y_true, y_pred) -> dict[str, float]:
     }
 
 
+def _device() -> torch.device:
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 class SAMambaPlugin(BaseModelPlugin):
     name = "samamba"
     version = "0.1.0"
@@ -41,16 +45,19 @@ class SAMambaPlugin(BaseModelPlugin):
 
     def train(self, dataset_path: str, config: dict, output_dir: str) -> TrainResult:
         torch.manual_seed(config.get("seed", 42))
+        device = _device()
 
         data, scaler = load_dataset(dataset_path, config)
         model = PlaceholderSAMambaClassifier(
             input_dim=len(data.feature_names), hidden_dim=config.get("hidden_dim", 64)
-        )
+        ).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
         loss_fn = torch.nn.BCEWithLogitsLoss()
 
         train_loader = DataLoader(
-            TensorDataset(data.X_train, data.y_train), batch_size=config["batch_size"], shuffle=True
+            TensorDataset(data.X_train.to(device), data.y_train.to(device)),
+            batch_size=config["batch_size"],
+            shuffle=True,
         )
 
         model.train()
@@ -63,9 +70,10 @@ class SAMambaPlugin(BaseModelPlugin):
 
         model.eval()
         with torch.no_grad():
-            val_probs = torch.sigmoid(model(data.X_val))
-            val_preds = (val_probs >= 0.5).float()
+            val_probs = torch.sigmoid(model(data.X_val.to(device)))
+            val_preds = (val_probs >= 0.5).float().cpu()
         metrics = _binary_metrics(data.y_val.numpy(), val_preds.numpy())
+        metrics["trained_on_device"] = 1.0 if device.type == "cuda" else 0.0
 
         checkpoint_path = Path(output_dir) / "checkpoint.pt"
         torch.save(
@@ -82,24 +90,25 @@ class SAMambaPlugin(BaseModelPlugin):
 
         return TrainResult(checkpoint_path=str(checkpoint_path), metrics=metrics)
 
-    def _load_checkpoint(self, model_path: str) -> tuple[PlaceholderSAMambaClassifier, dict]:
-        ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
-        model = PlaceholderSAMambaClassifier(input_dim=ckpt["input_dim"], hidden_dim=ckpt["hidden_dim"])
+    def _load_checkpoint(self, model_path: str) -> tuple[PlaceholderSAMambaClassifier, dict, torch.device]:
+        device = _device()
+        ckpt = torch.load(model_path, map_location=device, weights_only=False)
+        model = PlaceholderSAMambaClassifier(input_dim=ckpt["input_dim"], hidden_dim=ckpt["hidden_dim"]).to(device)
         model.load_state_dict(ckpt["model_state_dict"])
         model.eval()
-        return model, ckpt
+        return model, ckpt, device
 
     def evaluate(self, model_path: str, dataset_path: str, config: dict) -> dict[str, float]:
-        model, ckpt = self._load_checkpoint(model_path)
+        model, ckpt, device = self._load_checkpoint(model_path)
         X, y = load_all(dataset_path, config, ckpt["scaler"], ckpt["feature_names"])
         with torch.no_grad():
-            preds = (torch.sigmoid(model(X)) >= 0.5).float()
+            preds = (torch.sigmoid(model(X.to(device))) >= 0.5).float().cpu()
         return _binary_metrics(y.numpy(), preds.numpy())
 
     def predict(self, model_path: str, inputs: Any) -> Any:
         """`inputs` is a dict of {feature_name: value} for a single address, or a
         list of such dicts for a batch."""
-        model, ckpt = self._load_checkpoint(model_path)
+        model, ckpt, device = self._load_checkpoint(model_path)
         rows = inputs if isinstance(inputs, list) else [inputs]
         feature_names = ckpt["feature_names"]
 
@@ -108,10 +117,10 @@ class SAMambaPlugin(BaseModelPlugin):
             raise ValueError(f"prediction input missing required feature(s): {sorted(set(missing))}")
 
         X = torch.tensor([[float(row[f]) for f in feature_names] for row in rows], dtype=torch.float32)
-        X = torch.tensor(ckpt["scaler"].transform(X.numpy()), dtype=torch.float32)
+        X = torch.tensor(ckpt["scaler"].transform(X.numpy()), dtype=torch.float32).to(device)
 
         with torch.no_grad():
-            probs = torch.sigmoid(model(X)).tolist()
+            probs = torch.sigmoid(model(X)).cpu().tolist()
 
         results = [{"fraud_probability": p, "is_fraud": p >= 0.5} for p in probs]
         return results if isinstance(inputs, list) else results[0]
