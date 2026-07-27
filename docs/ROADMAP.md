@@ -33,6 +33,18 @@ real local MLflow server, a live backend instance, a real frontend build) except
 environment this one doesn't have: `docker compose up` itself, and a browser to click through the UI. Both are
 the natural first steps on a machine that has Docker/a browser — see `infra/README.md` and `frontend/README.md`.
 
+**Full exit criteria met once, without the UI (2026-07-27):** ran backend + training-service + a real local
+MLflow server together (bare processes in tmux, no Docker), against the real Slurm cluster, on a real dataset
+(`scripts/prepare_cora_dataset.py` — the classic Cora citation network, not synthetic data): registered the
+dataset, created an experiment (linked to a real MLflow experiment), submitted a `gcn_baseline` job entirely
+through the HTTP API, watched it go `submitted → finished` via the API (not squeue directly — proving
+training-service's poller → backend callback loop works), and promoted it to the model registry with real
+metrics pulled from MLflow (88.7% accuracy, `trained_on_device: 1.0` confirming real GPU use). This also caught
+and fixed two real bugs: plugins never moved tensors to `cuda` (silently CPU-only regardless of what Slurm
+allocated), and the backend hardcoded a Docker-only callback hostname that would have silently broken outside
+Docker. The only remaining gap to a fully complete Phase 1 is driving this same flow through the **frontend**
+instead of curl, and doing it all via **Docker Compose** instead of bare processes.
+
 ## Phase 2 — Serve and observe
 
 - [ ] Inference API: load a registered model version, serve predictions over REST
