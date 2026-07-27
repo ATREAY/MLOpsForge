@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str = "minioadmin"
     S3_SECRET_KEY: str = "minioadmin"
 
+    # Default MLflow tracking server; overridden per-submission by the
+    # mlflow_tracking_uri the backend sends (see schemas.SubmitRequest), so this
+    # is only used as a fallback.
+    MLFLOW_TRACKING_URI: str = "http://localhost:5000"
+
     # State file tracking {internal_job_id -> tracking info} across restarts.
     STATE_FILE: str = str(SERVICE_ROOT / "_state" / "jobs.json")
 

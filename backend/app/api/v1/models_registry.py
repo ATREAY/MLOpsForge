@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -5,7 +7,9 @@ from app.api.deps import get_db
 from app.models.job import Job
 from app.models.model_version import ModelVersion
 from app.schemas.model_version import ModelStageUpdate, ModelVersionRead
+from app.services.mlflow_client import get_run_metrics
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/models", tags=["models"])
 
 
@@ -38,6 +42,13 @@ def register_model_from_job(job_id: str, name: str, db: Session = Depends(get_db
     if not job.checkpoint_uri:
         raise HTTPException(409, "job has no checkpoint recorded yet")
 
+    metrics: dict[str, float] = {}
+    if job.mlflow_run_id:
+        try:
+            metrics = get_run_metrics(job.mlflow_run_id)
+        except Exception:  # noqa: BLE001 — a registry promotion shouldn't fail just because MLflow is unreachable
+            logger.exception("could not fetch metrics from MLflow run %s", job.mlflow_run_id)
+
     existing_count = db.query(ModelVersion).filter(ModelVersion.name == name).count()
     model_version = ModelVersion(
         name=name,
@@ -46,7 +57,7 @@ def register_model_from_job(job_id: str, name: str, db: Session = Depends(get_db
         plugin_id=job.plugin_id,
         dataset_version_id=job.dataset_version_id,
         artifact_uri=job.checkpoint_uri,
-        metrics={},
+        metrics=metrics,
     )
     db.add(model_version)
     db.commit()

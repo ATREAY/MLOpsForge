@@ -4,12 +4,15 @@ operations main.py exposes: submit and cancel."""
 import json
 import logging
 import posixpath
+import tempfile
+from pathlib import Path
 
 import httpx
 from jinja2 import Environment, FileSystemLoader
 
 from app.config import SERVICE_ROOT, get_settings
 from app.dataset_resolver import resolve_dataset_path
+from app.mlflow_logger import log_run
 from app.slurm_client import SlurmSSHClient, classify_state
 from app.state_store import JobStateStore
 
@@ -35,6 +38,8 @@ def submit_job(
     config: dict,
     resources: dict,
     callback_url: str,
+    mlflow_experiment_id: str | None = None,
+    mlflow_tracking_uri: str | None = None,
 ) -> dict:
     settings = get_settings()
     remote_job_dir = posixpath.join(settings.remote_workdir(), job_id)
@@ -77,6 +82,10 @@ def submit_job(
             "output_dir": output_dir,
             "log_path": log_path,
             "callback_url": callback_url,
+            "plugin_entrypoint": plugin_entrypoint,
+            "config": config,
+            "mlflow_experiment_id": mlflow_experiment_id,
+            "mlflow_tracking_uri": mlflow_tracking_uri or settings.MLFLOW_TRACKING_URI,
         },
     )
     logger.info("job %s submitted as slurm job %s", job_id, slurm_job_id)
@@ -112,9 +121,30 @@ def reconcile_job(store: JobStateStore, job_id: str, record: dict) -> None:
                     payload = {"status": "failed", "error_message": result["error"]}
                 else:
                     payload["checkpoint_uri"] = result["checkpoint_path"]
-                    # Metrics land in MLflow via the backend's callback handler,
-                    # not carried in this status payload — see docs/ARCHITECTURE.md.
-            payload["logs_uri"] = record.get("log_path")
+                    payload["logs_uri"] = record.get("log_path")
+
+                    if record.get("mlflow_experiment_id"):
+                        local_checkpoint = None
+                        try:
+                            with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as tmp:
+                                local_checkpoint = tmp.name
+                            ssh.fetch_file(result["checkpoint_path"], local_checkpoint)
+                            payload["mlflow_run_id"] = log_run(
+                                tracking_uri=record["mlflow_tracking_uri"],
+                                experiment_id=record["mlflow_experiment_id"],
+                                job_id=job_id,
+                                plugin_entrypoint=record["plugin_entrypoint"],
+                                config=record["config"],
+                                metrics=result["metrics"],
+                                local_checkpoint_path=local_checkpoint,
+                            )
+                        except Exception:  # noqa: BLE001 — MLflow logging failing shouldn't mark a successful job as failed
+                            logger.exception("failed to log job %s to MLflow", job_id)
+                        finally:
+                            if local_checkpoint:
+                                Path(local_checkpoint).unlink(missing_ok=True)
+            else:
+                payload["logs_uri"] = record.get("log_path")
 
     store.update(job_id, status=new_status)
     try:

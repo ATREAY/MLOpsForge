@@ -12,7 +12,14 @@ class TrainingServiceError(RuntimeError):
     pass
 
 
-def submit_job(job_id: str, plugin_entrypoint: str, dataset_uri: str, config: dict, resources: dict) -> dict:
+def submit_job(
+    job_id: str,
+    plugin_entrypoint: str,
+    dataset_uri: str,
+    config: dict,
+    resources: dict,
+    mlflow_experiment_id: str | None,
+) -> dict:
     settings = get_settings()
     payload = {
         "job_id": job_id,
@@ -20,6 +27,8 @@ def submit_job(job_id: str, plugin_entrypoint: str, dataset_uri: str, config: di
         "dataset_uri": dataset_uri,
         "config": config,
         "resources": resources,
+        "mlflow_experiment_id": mlflow_experiment_id,
+        "mlflow_tracking_uri": settings.MLFLOW_TRACKING_URI,
         "callback_url": f"http://backend:8000{settings.API_V1_PREFIX}/jobs/{job_id}/status",
     }
     try:

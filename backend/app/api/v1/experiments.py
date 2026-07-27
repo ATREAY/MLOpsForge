@@ -1,10 +1,14 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.models.experiment import Experiment
 from app.schemas.experiment import ExperimentCreate, ExperimentRead
+from app.services.mlflow_client import get_or_create_experiment
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/experiments", tags=["experiments"])
 
 
@@ -16,6 +20,12 @@ def list_experiments(db: Session = Depends(get_db)):
 @router.post("", response_model=ExperimentRead, status_code=201)
 def create_experiment(payload: ExperimentCreate, db: Session = Depends(get_db)):
     experiment = Experiment(**payload.model_dump())
+
+    try:
+        experiment.mlflow_experiment_id = get_or_create_experiment(payload.name)
+    except Exception:  # noqa: BLE001 — MLflow being unreachable shouldn't block experiment creation
+        logger.exception("could not create/lookup MLflow experiment for '%s'", payload.name)
+
     db.add(experiment)
     db.commit()
     db.refresh(experiment)

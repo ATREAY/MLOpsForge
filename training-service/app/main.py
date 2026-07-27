@@ -45,6 +45,8 @@ def submit(payload: SubmitRequest):
             config=payload.config,
             resources=payload.resources,
             callback_url=payload.callback_url,
+            mlflow_experiment_id=payload.mlflow_experiment_id,
+            mlflow_tracking_uri=payload.mlflow_tracking_uri,
         )
     except SlurmCommandError as exc:
         raise HTTPException(502, f"Slurm submission failed: {exc}") from exc

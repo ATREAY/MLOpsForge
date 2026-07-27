@@ -62,6 +62,7 @@ def create_job(payload: JobCreate, db: Session = Depends(get_db)):
             dataset_uri=dataset_version.storage_uri,
             config=payload.config,
             resources=plugin.default_resources,
+            mlflow_experiment_id=experiment.mlflow_experiment_id,
         )
         job.status = JobStatus.SUBMITTED
         job.slurm_job_id = result.get("slurm_job_id")
