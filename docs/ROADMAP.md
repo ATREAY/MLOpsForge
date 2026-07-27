@@ -15,8 +15,10 @@ it's the fastest way to answer "what's actually done" in a future session or an 
 - [x] Training Service: Slurm SSH client, job script templating, submit + poll — **verified against the real
       HPC cluster**: submitted an actual sbatch job to `cse-gpu-all`, watched QUEUED→RUNNING→FINISHED via
       squeue/sacct, recovered checkpoint + metrics
-- [ ] MLflow integration: every job run logs params/metrics/artifacts
-- [ ] Model Registry: promote a finished run's checkpoint to a versioned model
+- [x] MLflow integration: experiment create/lookup, run logging (params/metrics/checkpoint artifact) on job
+      completion, metrics readback for the registry — **verified against a real local MLflow server**
+- [x] Model Registry: promote a finished run's checkpoint to a versioned model, with real metrics pulled
+      from MLflow
 - [ ] React frontend: Datasets, Training (submit + live queue), Experiments, Models pages wired to the API
 - [ ] Docker Compose for the control plane (Postgres, Redis, MLflow, MinIO, backend, frontend, nginx)
 
