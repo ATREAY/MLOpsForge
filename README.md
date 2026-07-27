@@ -79,7 +79,7 @@ Early build — see [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased plan and
 
 | Layer                | Technology |
 |-----------------------|------------|
-| Frontend              | React, TypeScript, Vite, TailwindCSS, shadcn/ui, React Query |
+| Frontend              | React, TypeScript, Vite, TailwindCSS, TanStack Query |
 | Backend gateway       | FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic |
 | Database              | PostgreSQL |
 | Cache / task state    | Redis |
