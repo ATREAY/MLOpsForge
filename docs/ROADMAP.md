@@ -19,7 +19,9 @@ it's the fastest way to answer "what's actually done" in a future session or an 
       completion, metrics readback for the registry — **verified against a real local MLflow server**
 - [x] Model Registry: promote a finished run's checkpoint to a versioned model, with real metrics pulled
       from MLflow
-- [ ] React frontend: Datasets, Training (submit + live queue), Experiments, Models pages wired to the API
+- [x] React frontend: Datasets, Training (submit + live queue), Experiments, Models pages wired to the API —
+      build verified (npm ci + tsc + vite build clean, dev server's /api proxy confirmed against a live
+      backend); **not yet visually checked in a real browser**, no browser available in the dev environment
 - [ ] Docker Compose for the control plane (Postgres, Redis, MLflow, MinIO, backend, frontend, nginx)
 
 **Exit criteria:** submit a SAMamba training job from the dashboard, watch it run on the Slurm cluster, see

@@ -8,6 +8,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.services.plugin_registry import sync_plugin_registry
+from app.services.storage import ensure_bucket
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,6 +17,12 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+
+    try:
+        ensure_bucket()
+    except Exception:  # noqa: BLE001 — MinIO being unreachable shouldn't block backend startup
+        logger.exception("could not ensure MinIO bucket '%s' exists", settings.S3_BUCKET)
+
     db = SessionLocal()
     try:
         synced = sync_plugin_registry(db, settings.PLUGINS_DIR)

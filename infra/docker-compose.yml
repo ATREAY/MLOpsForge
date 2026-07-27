@@ -1,0 +1,112 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mlflow:
+    build:
+      context: ./mlflow
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
+      MLFLOW_ARTIFACT_ROOT: s3://mlopsforge/mlflow-artifacts
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      TRAINING_SERVICE_URL: http://training-service:8100
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
+    ports:
+      - "8000:8000"
+
+  training-service:
+    build:
+      context: ..
+      dockerfile: training-service/Dockerfile
+    environment:
+      SLURM_SSH_HOST: ${SLURM_SSH_HOST}
+      SLURM_SSH_USER: ${SLURM_SSH_USER}
+      SLURM_SSH_KEY_PATH: /run/secrets/slurm_ssh_key
+      SLURM_REPO_PATH: ${SLURM_REPO_PATH}
+      SLURM_PYTHON_BIN: ${SLURM_PYTHON_BIN}
+      SLURM_DEFAULT_PARTITION: ${SLURM_DEFAULT_PARTITION}
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - training_service_state:/srv/mlopsforge/training-service/_state
+      - ${SLURM_SSH_KEY_HOST_PATH}:/run/secrets/slurm_ssh_key:ro
+    ports:
+      - "8100:8100"
+
+  frontend:
+    build:
+      context: ../frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:
+  minio_data:
+  training_service_state:
