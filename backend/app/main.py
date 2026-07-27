@@ -1,0 +1,44 @@
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.router import api_router
+from app.core.config import get_settings
+from app.db.session import SessionLocal
+from app.services.plugin_registry import sync_plugin_registry
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = get_settings()
+    db = SessionLocal()
+    try:
+        synced = sync_plugin_registry(db, settings.PLUGINS_DIR)
+        logger.info("startup: %d plugin(s) registered", len(synced))
+    finally:
+        db.close()
+    yield
+
+
+def create_app() -> FastAPI:
+    settings = get_settings()
+    app = FastAPI(title=settings.APP_NAME, version="0.1.0", lifespan=lifespan)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+    return app
+
+
+app = create_app()
