@@ -1,0 +1,4 @@
+# No extra dependencies beyond plugins/base/requirements.txt — deliberately
+# implemented without torch-geometric to keep this plugin dependency-free
+# proof that the BaseModelPlugin interface doesn't assume any particular
+# graph library.

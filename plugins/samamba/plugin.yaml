@@ -1,0 +1,38 @@
+name: samamba
+version: "0.1.0"
+description: >
+  Ethereum fraud detection over per-address transaction features. Model body is
+  currently a placeholder sequence classifier — see README.md.
+task_type: graph-classification
+entrypoint: "plugins.samamba.plugin:SAMambaPlugin"
+
+default_resources:
+  partition: cse-gpu-all
+  gpus: 1
+  cpus_per_task: 4
+  mem_gb: 16
+  time_limit: "02:00:00"
+
+config_schema:
+  type: object
+  properties:
+    learning_rate:
+      type: number
+      default: 0.001
+      minimum: 0.00001
+    epochs:
+      type: integer
+      default: 20
+      minimum: 1
+    batch_size:
+      type: integer
+      default: 64
+      minimum: 1
+    hidden_dim:
+      type: integer
+      default: 64
+      minimum: 8
+    seed:
+      type: integer
+      default: 42
+  required: [learning_rate, epochs, batch_size]

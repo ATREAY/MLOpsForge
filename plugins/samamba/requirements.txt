@@ -1,0 +1,2 @@
+# No extra dependencies beyond plugins/base/requirements.txt today.
+# TODO(real SAMamba): add mamba-ssm / einops / whatever the real architecture needs here.
