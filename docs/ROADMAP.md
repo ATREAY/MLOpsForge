@@ -22,10 +22,16 @@ it's the fastest way to answer "what's actually done" in a future session or an 
 - [x] React frontend: Datasets, Training (submit + live queue), Experiments, Models pages wired to the API —
       build verified (npm ci + tsc + vite build clean, dev server's /api proxy confirmed against a live
       backend); **not yet visually checked in a real browser**, no browser available in the dev environment
-- [ ] Docker Compose for the control plane (Postgres, Redis, MLflow, MinIO, backend, frontend, nginx)
+- [x] Docker Compose for the control plane (Postgres, Redis, MLflow, MinIO, backend, frontend) — written and
+      reviewed, but **not yet run end-to-end** (no Docker in the dev environment); see `infra/README.md`
 
 **Exit criteria:** submit a SAMamba training job from the dashboard, watch it run on the Slurm cluster, see
 metrics land in MLflow, and promote the resulting checkpoint to the model registry — all through the UI.
+
+Every piece of this has been verified individually against real infrastructure (the actual Slurm cluster, a
+real local MLflow server, a live backend instance, a real frontend build) except the two things that need an
+environment this one doesn't have: `docker compose up` itself, and a browser to click through the UI. Both are
+the natural first steps on a machine that has Docker/a browser — see `infra/README.md` and `frontend/README.md`.
 
 ## Phase 2 — Serve and observe
 
