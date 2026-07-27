@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH --job-name={{ job_name }}
+#SBATCH --partition={{ partition }}
+{%- if gpus and gpus|int > 0 %}
+#SBATCH --gres=gpu:{{ gpus }}
+{%- endif %}
+#SBATCH --cpus-per-task={{ cpus_per_task }}
+#SBATCH --mem={{ mem_gb }}G
+#SBATCH --time={{ time_limit }}
+#SBATCH --output={{ log_path }}
+#SBATCH --chdir={{ repo_path }}
+
+set -euo pipefail
+
+{{ python_bin }} -m plugins.base.run_train \
+    --plugin-entrypoint {{ plugin_entrypoint }} \
+    --dataset-path {{ dataset_path }} \
+    --config-path {{ config_path }} \
+    --output-dir {{ output_dir }}
