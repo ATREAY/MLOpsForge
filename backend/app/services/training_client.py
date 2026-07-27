@@ -29,7 +29,7 @@ def submit_job(
         "resources": resources,
         "mlflow_experiment_id": mlflow_experiment_id,
         "mlflow_tracking_uri": settings.MLFLOW_TRACKING_URI,
-        "callback_url": f"http://backend:8000{settings.API_V1_PREFIX}/jobs/{job_id}/status",
+        "callback_url": f"{settings.BACKEND_CALLBACK_BASE_URL}{settings.API_V1_PREFIX}/jobs/{job_id}/status",
     }
     try:
         resp = httpx.post(f"{settings.TRAINING_SERVICE_URL}/submit", json=payload, timeout=30)

@@ -68,6 +68,7 @@ services:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       TRAINING_SERVICE_URL: http://training-service:8100
+      BACKEND_CALLBACK_BASE_URL: http://backend:8000
     depends_on:
       postgres:
         condition: service_healthy

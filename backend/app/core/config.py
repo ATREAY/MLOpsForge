@@ -45,6 +45,11 @@ class Settings(BaseSettings):
 
     TRAINING_SERVICE_URL: str = "http://localhost:8100"
 
+    # How training-service reaches back into this API to report job status.
+    # Defaults to localhost for bare/tmux-style local runs; docker-compose
+    # overrides this to "http://backend:8000" (the service's Docker network alias).
+    BACKEND_CALLBACK_BASE_URL: str = "http://localhost:8000"
+
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     PLUGINS_DIR: str = str(REPO_ROOT / "plugins")
