@@ -81,7 +81,13 @@ actually arrives.
 
 ## Phase 2 — Serve and observe
 
-- [ ] Inference API: load a registered model version, serve predictions over REST
+- [x] Inference API: new `inference-service` dynamically loads a plugin and runs `predict()`; backend's
+      `POST /inference/predict/{model_version_id}` resolves a model version into plugin+checkpoint first, so
+      callers never need internal paths. **Verified against both real registered models** in the live tmux
+      session: `samamba-ethereum-fraud-detector` correctly flagged a known-fraud address
+      (`fraud_probability: 0.72`), `gcn-cora-classifier` correctly classified real Cora nodes. Known gap:
+      checkpoint paths don't cross machines yet under Docker — see `inference-service/README.md`. No frontend
+      page yet (API/script only).
 - [ ] Auth: JWT login, per-user experiment/job scoping
 - [ ] Prometheus metrics (job queue depth, training duration, inference latency) + Grafana dashboards
 - [ ] WebSocket live job status instead of polling

@@ -68,6 +68,7 @@ services:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       TRAINING_SERVICE_URL: http://training-service:8100
+      INFERENCE_SERVICE_URL: http://inference-service:8200
       BACKEND_CALLBACK_BASE_URL: http://backend:8000
     depends_on:
       postgres:
@@ -98,6 +99,19 @@ services:
       - ${SLURM_SSH_KEY_HOST_PATH}:/run/secrets/slurm_ssh_key:ro
     ports:
       - "8100:8100"
+
+  inference-service:
+    build:
+      context: ..
+      dockerfile: inference-service/Dockerfile
+    ports:
+      - "8200:8200"
+    # NOTE: model_version.artifact_uri today is a path on the Slurm cluster's
+    # filesystem (see training-service's checkpoint handling) — fine when
+    # everything runs on one machine (as this was developed and verified),
+    # but this container won't be able to read that path unless it's shared
+    # via a volume or checkpoints get pushed to MinIO first. Not solved yet;
+    # see inference-service/README.md.
 
   frontend:
     build:

@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     SLURM_DEFAULT_PARTITION: str = "cse-gpu-all"
 
     TRAINING_SERVICE_URL: str = "http://localhost:8100"
+    INFERENCE_SERVICE_URL: str = "http://localhost:8200"
 
     # How training-service reaches back into this API to report job status.
     # Defaults to localhost for bare/tmux-style local runs; docker-compose

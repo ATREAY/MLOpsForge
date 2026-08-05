@@ -62,6 +62,7 @@ MLOpsForge/
 ├── backend/            FastAPI control-plane API: auth, datasets, experiments, jobs, models, metrics
 ├── plugins/            Model plugin implementations (BaseModelPlugin contract). SAMamba lives here.
 ├── training-service/   Slurm orchestration: job templates, SSH client, sbatch/squeue/sacct polling
+├── inference-service/  Loads a registered model via its plugin and serves predictions over REST
 ├── sdk/                Python client SDK — how a plugin author or script talks to the platform
 ├── frontend/           React + TypeScript dashboard
 ├── infra/              docker-compose stack: Postgres, Redis, MLflow, MinIO, nginx, Prometheus, Grafana

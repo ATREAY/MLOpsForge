@@ -60,12 +60,27 @@ Each plugin ships its own `requirements.txt` (installed into the Slurm job's env
 is the reference implementation for Ethereum fraud detection; `plugins/gcn_baseline/` exists specifically to
 prove the interface is not SAMamba-shaped.
 
-### 4. `frontend/` — React dashboard
+### 4. `inference-service/` — model serving
 
-Pages: Dashboard, Datasets, Experiments, Training (submit + queue view), Models (registry), Inference (try a
-model), Monitoring, Logs. Talks only to `backend/`'s REST API; never touches Slurm, MLflow, or MinIO directly.
+The one service outside a Slurm job that actually imports and runs plugin code. Given `{plugin_entrypoint,
+model_path, inputs}`, it dynamically loads the plugin (same `plugins.base.registry.load_plugin` training-service's
+`run_train.py` uses) and calls `predict()`. Kept separate from the backend specifically so the backend never
+needs torch/sklearn/etc. installed — the backend's `/inference/predict/{model_version_id}` route resolves a
+model version into those three fields (via the model registry) before calling this service, so external callers
+only ever need a model version id, never an internal checkpoint path.
 
-### 5. Data stores
+v1 reloads the checkpoint from disk per request — correct, not optimized; see
+`inference-service/README.md` for the caching/scaling notes and a known gap around checkpoint paths
+crossing machines under Docker.
+
+### 5. `frontend/` — React dashboard
+
+Pages: Dashboard, Datasets, Experiments, Training (submit + queue view), Models (registry). Talks only to
+`backend/`'s REST API; never touches Slurm, MLflow, MinIO, or inference-service directly. An Inference page
+(try a registered model against arbitrary inputs) is not built yet — today the inference API is
+curl/script-only.
+
+### 6. Data stores
 
 - **PostgreSQL** — system of record: `users`, `datasets`, `dataset_versions`, `experiments`, `jobs`,
   `model_versions`, `plugins`. See `backend/app/models/`.
