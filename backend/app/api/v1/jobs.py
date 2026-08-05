@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.metrics import JOB_DURATION_SECONDS
+from app.core.ws import manager as ws_manager
 from app.models.dataset import DatasetVersion
 from app.models.enums import JobStatus
 from app.models.experiment import Experiment
@@ -17,6 +18,10 @@ from app.services.training_client import TrainingServiceError, cancel_job, submi
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+
+
+def _broadcast(job: Job) -> None:
+    ws_manager.broadcast_json_threadsafe(JobRead.model_validate(job).model_dump(mode="json"))
 
 
 @router.get("", response_model=list[JobRead])
@@ -76,6 +81,7 @@ def create_job(payload: JobCreate, db: Session = Depends(get_db), current_user: 
 
     db.commit()
     db.refresh(job)
+    _broadcast(job)
     return job
 
 
@@ -118,6 +124,7 @@ def update_job_status(job_id: str, payload: JobStatusUpdate, db: Session = Depen
 
     db.commit()
     db.refresh(job)
+    _broadcast(job)
     return job
 
 
@@ -140,4 +147,5 @@ def cancel_job_endpoint(job_id: str, db: Session = Depends(get_db), current_user
     job.finished_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(job)
+    _broadcast(job)
     return job

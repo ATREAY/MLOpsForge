@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.metrics import router as metrics_router
+from app.core.ws import manager as ws_manager
 from app.db.session import SessionLocal
 from app.services.plugin_registry import sync_plugin_registry
 from app.services.storage import ensure_bucket
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    ws_manager.loop = asyncio.get_running_loop()
 
     try:
         ensure_bucket()
