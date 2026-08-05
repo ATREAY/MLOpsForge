@@ -100,7 +100,20 @@ actually arrives.
       (this was the one endpoint that had to stay open), and ran one more full job end to end
       (submit-with-token → real Slurm run → unauthenticated callback updates it → finished) to prove nothing
       else broke.
-- [ ] Prometheus metrics (job queue depth, training duration, inference latency) + Grafana dashboards
+- [x] Prometheus metrics (job queue depth, training duration, inference latency) + Grafana dashboards.
+      Hand-rolled with `prometheus_client` (not an auto-instrumentation library) so `/metrics` exposes exactly
+      these platform-specific signals rather than a generic HTTP firehose: backend exposes
+      `mlopsforge_job_queue_depth`, `mlopsforge_jobs_total{status}`, `mlopsforge_job_duration_seconds{status}`
+      (observed in the job-status callback on every terminal transition); inference-service exposes
+      `mlopsforge_inference_latency_seconds{plugin_entrypoint}` and `mlopsforge_inference_requests_total{...,
+      outcome}`. Both `/metrics` routes are deliberately unauthenticated (mounted outside the JWT-gated
+      router) since Prometheus can't send a bearer token. A 5-panel Grafana dashboard
+      (`infra/grafana/dashboards/mlopsforge.json`) covers all of it. **Verified live**: downloaded real
+      Prometheus/Grafana binaries (not Docker — same pattern as MLflow earlier), generated real jobs and
+      predictions, confirmed both scrape targets `up`, queried real numbers back through Prometheus directly
+      and through Grafana's datasource proxy (the exact path dashboard panels use), and confirmed Grafana
+      provisioned the datasource + dashboard JSON without error. Docker Compose versions of the configs
+      (service-name targets) are committed but not yet run through `docker compose up` — see `infra/README.md`.
 - [ ] WebSocket live job status instead of polling
 - [ ] Basic notifications on job completion/failure (webhook, then Slack/email)
 

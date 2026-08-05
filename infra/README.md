@@ -1,8 +1,9 @@
 # infra — control-plane Docker Compose stack
 
 Brings up everything except the compute plane (see [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)): Postgres,
-Redis, MinIO, MLflow, the backend API, training-service, and the frontend. Run this on a machine with Docker —
-not necessarily the Slurm cluster itself (see [`docs/ENVIRONMENT.md`](../docs/ENVIRONMENT.md) for why).
+Redis, MinIO, MLflow, the backend API, training-service, inference-service, the frontend, and Prometheus +
+Grafana for monitoring. Run this on a machine with Docker — not necessarily the Slurm cluster itself (see
+[`docs/ENVIRONMENT.md`](../docs/ENVIRONMENT.md) for why).
 
 ## Services
 
@@ -14,7 +15,10 @@ not necessarily the Slurm cluster itself (see [`docs/ENVIRONMENT.md`](../docs/EN
 | `mlflow` | built from `mlflow/Dockerfile` | 5000 | Tracking server, backed by Postgres + MinIO |
 | `backend` | built from `../backend/Dockerfile` | 8000 | FastAPI gateway |
 | `training-service` | built from `../training-service/Dockerfile` | 8100 | Slurm SSH orchestration |
+| `inference-service` | built from `../inference-service/Dockerfile` | 8200 | Loads a plugin and serves predictions |
 | `frontend` | built from `../frontend/Dockerfile` | 8080 | React dashboard, served by nginx, which also proxies `/api` to `backend` |
+| `prometheus` | `prom/prometheus:v2.54.1` | 9090 | Scrapes `backend:8000/metrics` and `inference-service:8200/metrics` |
+| `grafana` | `grafana/grafana:11.2.0` | 3000 | Dashboards over Prometheus — provisioned automatically from `grafana/provisioning/` and `grafana/dashboards/mlopsforge.json`; default login `admin`/`admin` |
 
 ## Running it
 
@@ -44,3 +48,11 @@ real local tracking server, the frontend build against a live backend) — what'
 Docker Compose orchestration itself: build contexts, env var wiring, service startup ordering, and the
 MinIO/Postgres/MLflow container images actually working together. Run `docker compose up --build` on a
 machine with Docker and fix whatever compose-specific issues come up before considering Phase 1 complete.
+
+Prometheus and Grafana specifically *were* verified — as standalone binaries (not via Docker, same as
+MLflow) scraping/visualizing the real backend and inference-service running in this session. The
+`prometheus.yml` scrape config and `grafana/provisioning/`/`grafana/dashboards/mlopsforge.json` files
+committed here are the Docker-oriented versions (service-name targets/datasource URL); what was actually run
+used `127.0.0.1`-targeted copies outside the repo. The dashboard JSON itself is identical either way and is
+confirmed valid — Grafana parsed it, provisioned it without error, and its panels return real data through the
+Prometheus datasource proxy.

@@ -7,6 +7,7 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "pydantic>=2.7",
+    "prometheus-client>=0.20",
     # This service is the one place outside a Slurm job that actually imports
     # and runs plugin code (see docs/ARCHITECTURE.md) — so unlike backend and
     # training-service, it needs every plugin's runtime deps, same as

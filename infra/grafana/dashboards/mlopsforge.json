@@ -1,0 +1,109 @@
+{
+  "title": "MLOpsForge",
+  "uid": "mlopsforge-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Job queue depth",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "mlopsforge_job_queue_depth",
+          "legendFormat": "queued/submitted/running",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "id": 2,
+      "title": "Jobs by status",
+      "type": "bargauge",
+      "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" },
+      "gridPos": { "h": 6, "w": 10, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "mlopsforge_jobs_total",
+          "legendFormat": "{{status}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal", "displayMode": "gradient" }
+    },
+    {
+      "id": 3,
+      "title": "Inference requests (by outcome)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (mlopsforge_inference_requests_total)",
+          "legendFormat": "{{outcome}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "id": 4,
+      "title": "Job duration (p50 / p95)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, status) (rate(mlopsforge_job_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50 {{status}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" }
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, status) (rate(mlopsforge_job_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95 {{status}}",
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": {}
+    },
+    {
+      "id": 5,
+      "title": "Inference latency (p50 / p95)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, plugin_entrypoint) (rate(mlopsforge_inference_latency_seconds_bucket[5m])))",
+          "legendFormat": "p50 {{plugin_entrypoint}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" }
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, plugin_entrypoint) (rate(mlopsforge_inference_latency_seconds_bucket[5m])))",
+          "legendFormat": "p95 {{plugin_entrypoint}}",
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "mlopsforge-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": {}
+    }
+  ]
+}

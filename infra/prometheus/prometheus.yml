@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: mlopsforge-backend
+    static_configs:
+      - targets: ["backend:8000"]
+
+  - job_name: mlopsforge-inference-service
+    static_configs:
+      - targets: ["inference-service:8200"]

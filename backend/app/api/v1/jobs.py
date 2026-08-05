@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.core.metrics import JOB_DURATION_SECONDS
 from app.models.dataset import DatasetVersion
 from app.models.enums import JobStatus
 from app.models.experiment import Experiment
@@ -104,6 +105,16 @@ def update_job_status(job_id: str, payload: JobStatusUpdate, db: Session = Depen
         job.started_at = now
     if payload.status in (JobStatus.FINISHED, JobStatus.FAILED, JobStatus.CANCELLED):
         job.finished_at = now
+        if job.submitted_at:
+            try:
+                submitted = job.submitted_at
+                if submitted.tzinfo is None:  # SQLite round-trips DateTime(timezone=True) as naive
+                    submitted = submitted.replace(tzinfo=timezone.utc)
+                JOB_DURATION_SECONDS.labels(status=payload.status.value).observe(
+                    max((now - submitted).total_seconds(), 0)
+                )
+            except Exception:  # noqa: BLE001 — a metrics recording failure must not block the status update
+                logger.exception("failed to record job duration metric for job %s", job_id)
 
     db.commit()
     db.refresh(job)
