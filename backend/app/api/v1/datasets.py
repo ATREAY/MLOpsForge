@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.models.dataset import Dataset, DatasetVersion
+from app.models.job import Job
 from app.models.user import User
 from app.schemas.dataset import (
     DatasetCreate,
@@ -40,6 +41,29 @@ def get_dataset(dataset_id: str, db: Session = Depends(get_db)):
     if dataset is None:
         raise HTTPException(404, "dataset not found")
     return dataset
+
+
+@router.delete("/{dataset_id}", status_code=204)
+def delete_dataset(
+    dataset_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    dataset = db.get(Dataset, dataset_id)
+    if dataset is None:
+        raise HTTPException(404, "dataset not found")
+
+    # owner_id is NULL on datasets created before auth existed (e.g. the
+    # Cora/Ethereum datasets from early testing) — anyone can clean those up.
+    # Datasets created since must be deleted by their owner.
+    if dataset.owner_id is not None and dataset.owner_id != current_user.id:
+        raise HTTPException(403, "only the dataset's owner can delete it")
+
+    version_ids = [v.id for v in dataset.versions]
+    in_use = db.query(Job).filter(Job.dataset_version_id.in_(version_ids)).first() if version_ids else None
+    if in_use is not None:
+        raise HTTPException(409, "cannot delete a dataset with a version referenced by an existing job")
+
+    db.delete(dataset)  # cascades to DatasetVersion rows (see Dataset.versions relationship)
+    db.commit()
 
 
 @router.post("/{dataset_id}/upload-url")

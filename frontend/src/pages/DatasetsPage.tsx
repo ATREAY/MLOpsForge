@@ -1,12 +1,24 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
-import { useCreateDataset, useDatasets } from "@/api/hooks";
+import { ApiError } from "@/api/client";
+import { useCreateDataset, useDatasets, useDeleteDataset } from "@/api/hooks";
 import { Button, Card, PageHeader } from "@/components/ui";
 
 export default function DatasetsPage() {
   const { data: datasets, isLoading } = useDatasets();
   const createDataset = useCreateDataset();
+  const deleteDataset = useDeleteDataset();
+
+  function handleDelete(id: string, name: string) {
+    if (!window.confirm(`Delete dataset "${name}"? This also deletes all its versions.`)) return;
+    deleteDataset.mutate(id, {
+      onError: (err) => {
+        const message = err instanceof ApiError ? err.message : "Failed to delete dataset.";
+        window.alert(message);
+      },
+    });
+  }
 
   const [name, setName] = useState("");
   const [taskType, setTaskType] = useState("graph-classification");
@@ -72,6 +84,7 @@ export default function DatasetsPage() {
                 <th className="pb-2 font-medium">Task type</th>
                 <th className="pb-2 font-medium">Description</th>
                 <th className="pb-2 font-medium">Created</th>
+                <th className="pb-2 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -81,6 +94,11 @@ export default function DatasetsPage() {
                   <td className="py-2 text-slate-600">{d.task_type}</td>
                   <td className="py-2 text-slate-500">{d.description ?? "—"}</td>
                   <td className="py-2 text-slate-500">{new Date(d.created_at).toLocaleString()}</td>
+                  <td className="py-2">
+                    <Button variant="danger" onClick={() => handleDelete(d.id, d.name)}>
+                      Delete
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>

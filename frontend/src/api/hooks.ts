@@ -34,6 +34,14 @@ export function useCreateDataset() {
   });
 }
 
+export function useDeleteDataset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (datasetId: string) => api.del<void>(`/datasets/${datasetId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["datasets"] }),
+  });
+}
+
 // -- Plugins ------------------------------------------------------------------
 
 export function usePlugins() {
