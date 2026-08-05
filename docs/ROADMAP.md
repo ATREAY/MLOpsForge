@@ -45,8 +45,25 @@ training-service's poller → backend callback loop works), and promoted it to t
 metrics pulled from MLflow (88.7% accuracy, `trained_on_device: 1.0` confirming real GPU use). This also caught
 and fixed two real bugs: plugins never moved tensors to `cuda` (silently CPU-only regardless of what Slurm
 allocated), and the backend hardcoded a Docker-only callback hostname that would have silently broken outside
-Docker. The only remaining gap to a fully complete Phase 1 is driving this same flow through the **frontend**
-instead of curl, and doing it all via **Docker Compose** instead of bare processes.
+Docker.
+
+**Frontend visually confirmed against this live session (2026-07-27):** forwarded the Vite dev server's port
+over VS Code Remote-SSH and opened the real dashboard in a real browser. Every page matched the live backend
+state exactly (Dashboard counts, the Cora dataset, the experiment's MLflow link, the finished job with its
+Slurm job id, the promoted model's real metrics) — not a mockup.
+
+**The actual flagship workload run on real data for the first time (2026-08-05):** found a real, no-auth
+Ethereum fraud dataset (13,920 real addresses, 6,283 fraud / 7,637 normal — same schema the `samamba` plugin
+expects, sourced from a public GitHub repo, see `datasets_registry/` — not the Kaggle original since that
+needs API credentials this environment doesn't have) and ran it through the exact same live session: registered
+via the API, `samamba` job submitted, ran as a real GPU sbatch job, promoted to the registry as
+`samamba-ethereum-fraud-detector` v1 — **87.7% accuracy, 86.0% F1, `trained_on_device: 1.0`**. Until this point
+every real-data run had used `gcn_baseline`; this is the first time the project's actual namesake workload
+trained on its actual target problem rather than synthetic test data.
+
+The only remaining gap to a fully complete Phase 1: submitting a job by **clicking through the Training page**
+itself (only the read path has been visually confirmed so far), and running the whole stack via **Docker
+Compose** instead of bare tmux processes.
 
 ## Phase 2 — Serve and observe
 
