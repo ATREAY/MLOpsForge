@@ -4,12 +4,13 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_current_user, get_db
 from app.models.dataset import DatasetVersion
 from app.models.enums import JobStatus
 from app.models.experiment import Experiment
 from app.models.job import Job
 from app.models.plugin import Plugin
+from app.models.user import User
 from app.schemas.job import JobCreate, JobRead, JobStatusUpdate
 from app.services.training_client import TrainingServiceError, cancel_job, submit_job
 
@@ -18,12 +19,12 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 @router.get("", response_model=list[JobRead])
-def list_jobs(db: Session = Depends(get_db)):
+def list_jobs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Job).order_by(Job.created_at.desc()).all()
 
 
 @router.get("/{job_id}", response_model=JobRead)
-def get_job(job_id: str, db: Session = Depends(get_db)):
+def get_job(job_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     job = db.get(Job, job_id)
     if job is None:
         raise HTTPException(404, "job not found")
@@ -31,7 +32,7 @@ def get_job(job_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=JobRead, status_code=201)
-def create_job(payload: JobCreate, db: Session = Depends(get_db)):
+def create_job(payload: JobCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     experiment = db.get(Experiment, payload.experiment_id)
     if experiment is None:
         raise HTTPException(404, "experiment not found")
@@ -110,7 +111,7 @@ def update_job_status(job_id: str, payload: JobStatusUpdate, db: Session = Depen
 
 
 @router.post("/{job_id}/cancel", response_model=JobRead)
-def cancel_job_endpoint(job_id: str, db: Session = Depends(get_db)):
+def cancel_job_endpoint(job_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     job = db.get(Job, job_id)
     if job is None:
         raise HTTPException(404, "job not found")

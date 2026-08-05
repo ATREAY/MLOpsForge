@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_current_user, get_db
 from app.models.dataset import Dataset, DatasetVersion
+from app.models.user import User
 from app.schemas.dataset import (
     DatasetCreate,
     DatasetRead,
@@ -21,10 +22,12 @@ def list_datasets(db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=DatasetRead, status_code=201)
-def create_dataset(payload: DatasetCreate, db: Session = Depends(get_db)):
+def create_dataset(
+    payload: DatasetCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     if db.query(Dataset).filter(Dataset.name == payload.name).first():
         raise HTTPException(409, f"dataset '{payload.name}' already exists")
-    dataset = Dataset(**payload.model_dump())
+    dataset = Dataset(**payload.model_dump(), owner_id=current_user.id)
     db.add(dataset)
     db.commit()
     db.refresh(dataset)

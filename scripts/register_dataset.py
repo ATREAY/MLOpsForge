@@ -13,9 +13,13 @@ Two storage modes:
                           obtained from the backend, for when the control
                           plane's object storage is the source of truth.
 
+Requires an account — pass --email/--password for an existing user, or
+--register to create one on the fly.
+
 Example:
     python scripts/register_dataset.py \\
         --api-url http://localhost:8000/api/v1 \\
+        --email you@example.com --password "..." \\
         --dataset-name ethereum-fraud-transactions \\
         --task-type graph-classification \\
         --file datasets_registry/ethereum_txns.csv \\
@@ -28,6 +32,21 @@ import sys
 from pathlib import Path
 
 import httpx
+
+
+def authenticate(client: httpx.Client, email: str, password: str, register: bool) -> None:
+    if register:
+        resp = client.post("/auth/register", json={"email": email, "password": password})
+        if resp.status_code == 409:
+            print(f"user '{email}' already exists, logging in instead")
+        else:
+            resp.raise_for_status()
+            print(f"registered new user '{email}'")
+
+    resp = client.post("/auth/login", json={"email": email, "password": password})
+    resp.raise_for_status()
+    token = resp.json()["access_token"]
+    client.headers["Authorization"] = f"Bearer {token}"
 
 
 def sha256_of(path: Path) -> str:
@@ -92,6 +111,9 @@ def main() -> int:
     parser.add_argument("--task-type", required=True)
     parser.add_argument("--file", required=True, type=Path)
     parser.add_argument("--storage-mode", choices=["local", "s3"], default="local")
+    parser.add_argument("--email", required=True)
+    parser.add_argument("--password", required=True)
+    parser.add_argument("--register", action="store_true", help="create the account if it doesn't exist yet")
     args = parser.parse_args()
 
     if not args.file.exists():
@@ -99,6 +121,7 @@ def main() -> int:
         return 1
 
     with httpx.Client(base_url=args.api_url, timeout=60) as client:
+        authenticate(client, args.email, args.password, args.register)
         dataset = get_or_create_dataset(client, args.dataset_name, args.description, args.task_type)
         register_fn = register_local if args.storage_mode == "local" else register_via_s3
         version = register_fn(client, dataset, args.file)

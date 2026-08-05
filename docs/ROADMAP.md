@@ -88,7 +88,18 @@ actually arrives.
       (`fraud_probability: 0.72`), `gcn-cora-classifier` correctly classified real Cora nodes. Known gap:
       checkpoint paths don't cross machines yet under Docker — see `inference-service/README.md`. No frontend
       page yet (API/script only).
-- [ ] Auth: JWT login, per-user experiment/job scoping
+- [x] Auth: JWT login (`/auth/register`, `/auth/login`, `/auth/me`), every route except health/auth/the
+      internal job-status callback now requires a valid token. Datasets and experiments get tagged with
+      `owner_id` on creation ("scoping" = ownership tracked, not visibility restricted — no per-user hiding of
+      others' resources, deliberately, matching "no multi-tenant RBAC" in the out-of-scope list below).
+      Frontend gained real Login/Register pages and now gates the whole app behind a token, stored in
+      localStorage and attached to every request; a 401 anywhere clears the token and bounces to `/login`.
+      `scripts/register_dataset.py` updated to authenticate (`--email/--password`, `--register` to create the
+      account). **Verified live**: registered a real user, confirmed every protected route 401s without a
+      token and works with one, confirmed training-service's unauthenticated status callback still works
+      (this was the one endpoint that had to stay open), and ran one more full job end to end
+      (submit-with-token → real Slurm run → unauthenticated callback updates it → finished) to prove nothing
+      else broke.
 - [ ] Prometheus metrics (job queue depth, training duration, inference latency) + Grafana dashboards
 - [ ] WebSocket live job status instead of polling
 - [ ] Basic notifications on job completion/failure (webhook, then Slack/email)

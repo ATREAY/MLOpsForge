@@ -1,6 +1,14 @@
 // Mirrors backend/app/schemas/*.py — keep in sync by hand for now; if the
 // surface grows much more, generate this from the OpenAPI schema instead.
 
+export interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Dataset {
   id: string;
   name: string;

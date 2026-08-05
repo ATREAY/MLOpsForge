@@ -1,12 +1,19 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.api.v1 import datasets, experiments, health, inference, jobs, models_registry, plugins
+from app.api.deps import get_current_user
+from app.api.v1 import auth, datasets, experiments, health, inference, jobs, models_registry, plugins
 
 api_router = APIRouter()
 api_router.include_router(health.router)
-api_router.include_router(datasets.router)
-api_router.include_router(plugins.router)
-api_router.include_router(experiments.router)
+api_router.include_router(auth.router)
+
+# jobs.router is gated per-endpoint, not here — it has one internal-only
+# endpoint (training-service's status callback) that must stay unauthenticated.
 api_router.include_router(jobs.router)
-api_router.include_router(models_registry.router)
-api_router.include_router(inference.router)
+
+_authenticated = [Depends(get_current_user)]
+api_router.include_router(datasets.router, dependencies=_authenticated)
+api_router.include_router(plugins.router, dependencies=_authenticated)
+api_router.include_router(experiments.router, dependencies=_authenticated)
+api_router.include_router(models_registry.router, dependencies=_authenticated)
+api_router.include_router(inference.router, dependencies=_authenticated)
