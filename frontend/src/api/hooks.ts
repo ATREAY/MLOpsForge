@@ -64,7 +64,9 @@ export function useCreateExperiment() {
 
 // -- Jobs -----------------------------------------------------------------
 
-export function useJobs(refetchIntervalMs = 5000) {
+// WebSocket push (see api/ws.ts, mounted in Layout) keeps this cache live;
+// the interval here is just a fallback in case the socket is down.
+export function useJobs(refetchIntervalMs = 30000) {
   return useQuery({
     queryKey: ["jobs"],
     queryFn: () => api.get<Job[]>("/jobs"),

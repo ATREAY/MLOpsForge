@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 import { logout, useCurrentUser } from "@/api/auth";
+import { useJobsLiveUpdates } from "@/api/ws";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", end: true },
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
+  useJobsLiveUpdates();
 
   return (
     <div className="flex min-h-screen">
