@@ -114,7 +114,19 @@ actually arrives.
       and through Grafana's datasource proxy (the exact path dashboard panels use), and confirmed Grafana
       provisioned the datasource + dashboard JSON without error. Docker Compose versions of the configs
       (service-name targets) are committed but not yet run through `docker compose up` — see `infra/README.md`.
-- [ ] WebSocket live job status instead of polling
+- [x] WebSocket live job status instead of polling. Backend: `GET /api/v1/ws/jobs`, in-process broadcast
+      (correct for today's single-process deployment; would need Redis pub/sub across multiple replicas —
+      not built since nothing here runs more than one backend process), token auth via query param since
+      browsers can't set a WS handshake header, unauthenticated connections rejected at the HTTP level (403)
+      by closing before `accept()`. Broadcasts from all three places a job's status actually changes
+      (`create_job`, the internal status callback, cancel). Frontend: `useJobsLiveUpdates()` patches pushes
+      straight into the shared `["jobs"]` React Query cache, mounted once in `Layout` so Dashboard/Training/
+      Models all get live updates for free; polling dropped from 5s to a 30s fallback (not removed — safety
+      net if the socket drops), with basic reconnect-with-delay built in. **Verified with a real Python
+      WebSocket test client** (not just code review): confirmed the 403 rejection without a token, then
+      watched real status transitions (`submitted → finished`) arrive as live pushes while a real job ran on
+      Slurm — and separately confirmed the connection succeeds through the actual Vite proxy path the browser
+      uses, not just directly against the backend.
 - [ ] Basic notifications on job completion/failure (webhook, then Slack/email)
 
 ## Phase 3 — Only if time permits before placements
