@@ -20,8 +20,11 @@ it's the fastest way to answer "what's actually done" in a future session or an 
 - [x] Model Registry: promote a finished run's checkpoint to a versioned model, with real metrics pulled
       from MLflow
 - [x] React frontend: Datasets, Training (submit + live queue), Experiments, Models pages wired to the API —
-      build verified (npm ci + tsc + vite build clean, dev server's /api proxy confirmed against a live
-      backend); **not yet visually checked in a real browser**, no browser available in the dev environment
+      **visually confirmed in a real browser** (VS Code Remote-SSH port-forwarding from the HPC node), every
+      page correctly rendering live data: the real Cora dataset, the real experiment + its MLflow link, the
+      real finished job with its Slurm job id, the real promoted model with real accuracy/GPU-confirmation
+      metrics. Read path confirmed end to end; submitting a *new* job by clicking through the Training page
+      (rather than curl) is the one interaction still untried.
 - [x] Docker Compose for the control plane (Postgres, Redis, MLflow, MinIO, backend, frontend) — written and
       reviewed, but **not yet run end-to-end** (no Docker in the dev environment); see `infra/README.md`
 
