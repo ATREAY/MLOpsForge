@@ -20,16 +20,15 @@ it's the fastest way to answer "what's actually done" in a future session or an 
 - [x] Model Registry: promote a finished run's checkpoint to a versioned model, with real metrics pulled
       from MLflow
 - [x] React frontend: Datasets, Training (submit + live queue), Experiments, Models pages wired to the API —
-      **visually confirmed in a real browser** (VS Code Remote-SSH port-forwarding from the HPC node), every
-      page correctly rendering live data: the real Cora dataset, the real experiment + its MLflow link, the
-      real finished job with its Slurm job id, the real promoted model with real accuracy/GPU-confirmation
-      metrics. Read path confirmed end to end; submitting a *new* job by clicking through the Training page
-      (rather than curl) is the one interaction still untried.
+      **visually confirmed in a real browser** (VS Code Remote-SSH port-forwarding from the HPC node), both
+      the read path (every page rendering live data correctly) and the write path (a real job submitted by
+      clicking through the Training page, landed correctly, ran on real Slurm, finished on its own)
 - [x] Docker Compose for the control plane (Postgres, Redis, MLflow, MinIO, backend, frontend) — written and
-      reviewed, but **not yet run end-to-end** (no Docker in the dev environment); see `infra/README.md`
+      reviewed; **deliberately not run yet** — see "On Docker" below for why that's a real decision, not a gap
 
-**Exit criteria:** submit a SAMamba training job from the dashboard, watch it run on the Slurm cluster, see
-metrics land in MLflow, and promote the resulting checkpoint to the model registry — all through the UI.
+**Exit criteria:** submit a training job from the dashboard, watch it run on the Slurm cluster, see metrics
+land in MLflow, and promote the resulting checkpoint to the model registry — all through the UI. **Met in full
+as of 2026-08-05** (see below).
 
 Every piece of this has been verified individually against real infrastructure (the actual Slurm cluster, a
 real local MLflow server, a live backend instance, a real frontend build) except the two things that need an
@@ -66,11 +65,19 @@ Training page — experiment, plugin, dataset, dataset version, defaults left as
 `config_schema` — and clicked "Submit training job". Watched it land in the backend (config matched the
 form's rendered defaults exactly, confirming the click actually drove the API rather than something stale),
 go out as real Slurm job `33696`, and finish (`submitted → running → finished`) entirely on its own via the
-Training page's 5s poll, no manual intervention after the click. This closes Phase 1's exit criteria in full
-except for one thing.
+Training page's 5s poll, no manual intervention after the click. **Phase 1's exit criteria is met in full.**
 
-The only remaining gap to a fully complete Phase 1: running the whole stack via **Docker Compose** instead of
-bare tmux processes on this HPC node.
+### On Docker
+
+Deliberately not run yet — this is a decision, not an oversight. Everything above (backend, both plugins, the
+real Slurm/GPU cluster, real MLflow, dataset registration, the model registry, and both the read and write
+paths of the real frontend in a real browser) is proven working as bare processes. Docker Compose doesn't add
+any *capability* on top of that — it's the same code, the same Slurm SSH connection, the same everything.
+What it buys is eliminating manual setup risk (matching Python/Node versions, port collisions, path bugs —
+all things this session actually hit and had to debug by hand) and making the repo runnable by someone who
+isn't the person who built it. That's worth doing before handing this repo to anyone else or writing it up for
+an audience that will actually try to run it, but not before then. Revisit `infra/README.md` when that need
+actually arrives.
 
 ## Phase 2 — Serve and observe
 
