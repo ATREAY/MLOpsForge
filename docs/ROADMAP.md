@@ -61,9 +61,16 @@ via the API, `samamba` job submitted, ran as a real GPU sbatch job, promoted to 
 every real-data run had used `gcn_baseline`; this is the first time the project's actual namesake workload
 trained on its actual target problem rather than synthetic test data.
 
-The only remaining gap to a fully complete Phase 1: submitting a job by **clicking through the Training page**
-itself (only the read path has been visually confirmed so far), and running the whole stack via **Docker
-Compose** instead of bare tmux processes.
+**Write path confirmed too (2026-08-05):** submitted a `gcn_baseline` job by actually clicking through the
+Training page — experiment, plugin, dataset, dataset version, defaults left as rendered by the plugin's
+`config_schema` — and clicked "Submit training job". Watched it land in the backend (config matched the
+form's rendered defaults exactly, confirming the click actually drove the API rather than something stale),
+go out as real Slurm job `33696`, and finish (`submitted → running → finished`) entirely on its own via the
+Training page's 5s poll, no manual intervention after the click. This closes Phase 1's exit criteria in full
+except for one thing.
+
+The only remaining gap to a fully complete Phase 1: running the whole stack via **Docker Compose** instead of
+bare tmux processes on this HPC node.
 
 ## Phase 2 — Serve and observe
 
