@@ -63,6 +63,7 @@ MLOpsForge/
 ├── plugins/            Model plugin implementations (BaseModelPlugin contract). SAMamba lives here.
 ├── training-service/   Slurm orchestration: job templates, SSH client, sbatch/squeue/sacct polling
 ├── inference-service/  Loads a registered model via its plugin and serves predictions over REST
+├── streaming-service/  Kafka producer/consumer demo: near-real-time transaction scoring via the inference API
 ├── sdk/                Python client SDK — how a plugin author or script talks to the platform
 ├── frontend/           React + TypeScript dashboard
 ├── infra/              docker-compose stack: Postgres, Redis, MLflow, MinIO, nginx, Prometheus, Grafana

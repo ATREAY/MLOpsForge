@@ -158,8 +158,22 @@ every item verified against real infrastructure generating real data, not mocked
       but device *isolation* isn't strictly enforced for non-GPU jobs on this cluster (see
       `plugins/mnist_cnn/README.md`).
 - [ ] Explainability: attention/subgraph visualization for SAMamba predictions
-- [ ] Triton Inference Server as an alternative serving backend
-- [ ] Kafka streaming ingestion for near-real-time transaction scoring
+- [ ] Triton Inference Server as an alternative serving backend — skipped deliberately: Triton only ships as a
+      Docker image or a heavy from-source build, neither buildable/verifiable in this Docker-less dev
+      environment the way everything else here has been. Writing the integration code without being able to
+      run it against a real Triton server would just be more "written, not verified" surface area, which this
+      project has specifically tried to avoid accumulating.
+- [x] Kafka streaming ingestion for near-real-time transaction scoring — new `streaming-service/`
+      (`producer.py` + `consumer.py`, not a long-running server, invoked on demand like
+      `scripts/register_dataset.py`). Producer streams real Ethereum-dataset rows to a Kafka topic; consumer
+      scores each one through the *actual* authenticated inference API (no shortcut bypassing the platform)
+      and publishes results to an output topic. **Verified against real infrastructure, unlike Triton above**:
+      downloaded and ran a real standalone Apache Kafka 4.1.2 broker (KRaft mode, no ZooKeeper) plus a portable
+      Temurin JDK 21 (neither Kafka nor Java was installed here — same "download a real standalone binary"
+      pattern as MLflow/Prometheus/Grafana). Streamed 15 real transactions end to end: 93.3% live accuracy
+      against ground truth, 39–163ms per-transaction scoring latency. `infra/docker-compose.yml` also gained a
+      `kafka` service (`apache/kafka:4.1.2` image, same software) for the Docker path, unrun here same as the
+      rest of that stack — see `streaming-service/README.md` for exactly what was and wasn't verified.
 - [x] Multi-run comparison view in the dashboard. New `GET /api/v1/jobs/{id}/metrics` pulls metrics live from
       MLflow via a job's `mlflow_run_id` — works for *any* finished job, not just ones promoted to the model
       registry (unlike the Models page's metrics, which are a Postgres snapshot taken at promotion time). The

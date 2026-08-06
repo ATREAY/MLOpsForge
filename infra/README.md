@@ -1,9 +1,9 @@
 # infra — control-plane Docker Compose stack
 
 Brings up everything except the compute plane (see [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)): Postgres,
-Redis, MinIO, MLflow, the backend API, training-service, inference-service, the frontend, and Prometheus +
-Grafana for monitoring. Run this on a machine with Docker — not necessarily the Slurm cluster itself (see
-[`docs/ENVIRONMENT.md`](../docs/ENVIRONMENT.md) for why).
+Redis, Kafka, MinIO, MLflow, the backend API, training-service, inference-service, the frontend, and
+Prometheus + Grafana for monitoring. Run this on a machine with Docker — not necessarily the Slurm cluster
+itself (see [`docs/ENVIRONMENT.md`](../docs/ENVIRONMENT.md) for why).
 
 ## Services
 
@@ -11,6 +11,7 @@ Grafana for monitoring. Run this on a machine with Docker — not necessarily th
 |---|---|---|---|
 | `postgres` | `postgres:16-alpine` | 5432 | System of record for the backend; also backs MLflow (separate `mlflow` database — see `postgres/init.sql`, since MLflow's own table names would otherwise collide with the backend's) |
 | `redis` | `redis:7-alpine` | 6379 | Job status cache / pub-sub (wired up in Phase 2) |
+| `kafka` | `apache/kafka:4.1.2` | 9092 | Broker for `streaming-service`'s near-real-time transaction scoring demo (KRaft mode, no ZooKeeper) |
 | `minio` | `minio/minio` | 9000 (API), 9001 (console) | Object storage for datasets, checkpoints, MLflow artifacts |
 | `mlflow` | built from `mlflow/Dockerfile` | 5000 | Tracking server, backed by Postgres + MinIO |
 | `backend` | built from `../backend/Dockerfile` | 8000 | FastAPI gateway |
@@ -56,3 +57,8 @@ committed here are the Docker-oriented versions (service-name targets/datasource
 used `127.0.0.1`-targeted copies outside the repo. The dashboard JSON itself is identical either way and is
 confirmed valid — Grafana parsed it, provisioned it without error, and its panels return real data through the
 Prometheus datasource proxy.
+
+Kafka got the same treatment: a real standalone Apache Kafka 4.1.2 broker (KRaft mode) plus a portable Temurin
+JDK — see `streaming-service/README.md` for the full verification (15 real transactions streamed and scored
+end to end, 93.3% live accuracy). The container image (`apache/kafka:4.1.2`) is the same software; only the
+Compose orchestration around it is unverified, not the broker itself.

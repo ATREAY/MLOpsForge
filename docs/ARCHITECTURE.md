@@ -84,13 +84,29 @@ inputs) is not built yet — today the inference API is curl/script-only.
 
 - **PostgreSQL** — system of record: `users`, `datasets`, `dataset_versions`, `experiments`, `jobs`,
   `model_versions`, `plugins`. See `backend/app/models/`.
-- **Redis** — ephemeral job status cache + pub/sub channel the API uses to push live job updates over
-  WebSocket to the frontend, without polling Postgres on every tick.
+- **Redis** — declared in config/docker-compose but not actually wired into any code path yet. The originally
+  planned job-status pub/sub (see `docs/ROADMAP.md`'s history) ended up built differently — see the WebSocket
+  note below — so Redis remains unused. Not removed, since it's cheap to keep declared for whatever actually
+  needs it first.
+- **Kafka** — not part of the control plane's own request/response path; it backs `streaming-service`'s
+  near-real-time transaction scoring demo (a producer simulating a live feed, a consumer scoring through the
+  real inference API). See section 8 below.
 - **MinIO** — blob storage for dataset files, checkpoints, plots, logs. Postgres stores metadata + MinIO keys,
   never the blobs themselves.
 - **MLflow** — experiment/run tracking and its own model registry backing store; the backend's `/experiments`
   and `/models` routers are a thin layer over MLflow's REST API plus MLOpsForge-specific metadata (which plugin,
   which Slurm job, which dataset version) that MLflow doesn't natively model.
+
+### 7. `streaming-service/` — near-real-time transaction scoring (Kafka)
+
+A producer/consumer pair, not a long-running server like the other services — invoked on demand the way
+`scripts/register_dataset.py` is, not started in tmux/Compose permanently. `producer.py` streams real rows
+from the Ethereum fraud dataset to a `ethereum-transactions` Kafka topic, standing in for whatever real
+upstream system would produce these events. `consumer.py` subscribes, scores each transaction through the
+*same* authenticated `POST /inference/predict/{model_version_id}` endpoint anything else would use — no
+shortcut that bypasses the platform to score faster — and publishes results to `ethereum-fraud-scores`. Proves
+the inference path is fast enough for a streaming use case (39–163ms per transaction, verified), not just
+batch/on-demand calls.
 
 ## Job lifecycle (end to end)
 
@@ -99,7 +115,9 @@ POST /api/v1/jobs {plugin: "samamba", dataset_version_id: 7, config: {...}}
   → backend validates config against plugin's schema, creates Job row (status=QUEUED)
   → backend calls training-service internal API
   → training-service renders sbatch script, SSHes to HPC, runs sbatch → slurm_job_id=42891
-  → training-service updates Job row, publishes status to Redis pub/sub
+  → training-service updates Job row, backend broadcasts the new status to every connected
+    WebSocket client via an in-process connection manager (app/core/ws.py) — correct for
+    today's single-process deployment; would need Redis pub/sub across multiple replicas
   → frontend WebSocket client receives QUEUED → RUNNING as squeue reflects it
   → on Slurm completion, training-service pulls checkpoint+logs, pushes to MinIO,
     logs final metrics to MLflow, sets Job status=FINISHED
@@ -110,6 +128,7 @@ POST /api/v1/jobs {plugin: "samamba", dataset_version_id: 7, config: {...}}
 ## What "general" actually means here
 
 The suggestion doc this project is based on lists a `Feature Store` and `Kafka streaming` as future phases.
-Both are deliberately deferred (see `docs/ROADMAP.md`) — they add real infrastructure surface area but aren't
-needed to prove the plugin-based, Slurm-backed platform story, and building them half-finished would weaken the
-project rather than strengthen it.
+Feature Store remains deliberately deferred (see `docs/ROADMAP.md`) — it adds real infrastructure surface area
+without being needed to prove the plugin-based, Slurm-backed platform story. Kafka streaming was built (see
+section 7) once the core platform was solid enough that a streaming demo actually meant something rather than
+being infrastructure for infrastructure's sake.

@@ -1,0 +1,14 @@
+[project]
+name = "mlopsforge-streaming-service"
+version = "0.1.0"
+description = "Kafka producer/consumer pair simulating near-real-time Ethereum transaction scoring"
+requires-python = ">=3.10"
+dependencies = [
+    "kafka-python>=2.0",
+    "httpx>=0.27",
+    "pandas>=2.2",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
