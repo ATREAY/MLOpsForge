@@ -14,6 +14,7 @@ from app.models.job import Job
 from app.models.plugin import Plugin
 from app.models.user import User
 from app.schemas.job import JobCreate, JobRead, JobStatusUpdate
+from app.services.notifications import notify_job_terminal
 from app.services.training_client import TrainingServiceError, cancel_job, submit_job
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,8 @@ def create_job(payload: JobCreate, db: Session = Depends(get_db), current_user: 
     db.commit()
     db.refresh(job)
     _broadcast(job)
+    if job.status == JobStatus.FAILED:  # immediate submission failure — training-service was never reached
+        notify_job_terminal(job)
     return job
 
 
@@ -125,6 +128,8 @@ def update_job_status(job_id: str, payload: JobStatusUpdate, db: Session = Depen
     db.commit()
     db.refresh(job)
     _broadcast(job)
+    if payload.status in (JobStatus.FINISHED, JobStatus.FAILED, JobStatus.CANCELLED):
+        notify_job_terminal(job)
     return job
 
 
@@ -148,4 +153,5 @@ def cancel_job_endpoint(job_id: str, db: Session = Depends(get_db), current_user
     db.commit()
     db.refresh(job)
     _broadcast(job)
+    notify_job_terminal(job)
     return job

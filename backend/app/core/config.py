@@ -53,6 +53,12 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # Fired on every job's terminal transition (finished/failed/cancelled).
+    # Empty string disables notifications entirely. Deliberately generic
+    # rather than Slack-specific — a Slack incoming webhook IS a webhook; see
+    # app/services/notifications.py for how one payload serves both.
+    NOTIFICATION_WEBHOOK_URL: str = ""
+
     PLUGINS_DIR: str = str(REPO_ROOT / "plugins")
 
 

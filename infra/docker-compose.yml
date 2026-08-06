@@ -70,6 +70,7 @@ services:
       TRAINING_SERVICE_URL: http://training-service:8100
       INFERENCE_SERVICE_URL: http://inference-service:8200
       BACKEND_CALLBACK_BASE_URL: http://backend:8000
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

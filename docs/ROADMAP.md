@@ -127,7 +127,20 @@ actually arrives.
       watched real status transitions (`submitted → finished`) arrive as live pushes while a real job ran on
       Slurm — and separately confirmed the connection succeeds through the actual Vite proxy path the browser
       uses, not just directly against the backend.
-- [ ] Basic notifications on job completion/failure (webhook, then Slack/email)
+- [x] Basic notifications on job completion/failure. One mechanism deliberately serves both "webhook" and
+      "Slack" from this line item — a Slack incoming webhook *is* a webhook; `notify_job_terminal`
+      (`backend/app/services/notifications.py`) includes a `text` field alongside the structured job data, so
+      the exact same payload renders correctly if `NOTIFICATION_WEBHOOK_URL` happens to be a Slack incoming
+      webhook URL, no Slack-specific code needed. Fires from all three places a job reaches a terminal state:
+      immediate submission failure, training-service's status callback (finished/failed/cancelled), and manual
+      cancellation. Email intentionally not built — needs SMTP credentials this environment doesn't have.
+      **Verified live**: pointed a real local HTTP receiver at the webhook URL, submitted a job through to
+      completion and confirmed the exact expected payload arrived (checkmark emoji, real Slurm job id, correct
+      timestamps), then separately verified the cancellation code path with a second job (🛑 emoji, `cancelled`
+      status) — two different code paths, both confirmed firing correctly.
+
+This completes Phase 2 in full: Inference API, Auth, Monitoring, WebSocket live status, and Notifications —
+every item verified against real infrastructure generating real data, not mocked.
 
 ## Phase 3 — Only if time permits before placements
 
