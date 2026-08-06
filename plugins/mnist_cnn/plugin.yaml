@@ -1,0 +1,40 @@
+name: mnist_cnn
+version: "0.1.0"
+description: >
+  Small CNN for handwritten digit classification (MNIST). Exists to prove the
+  platform handles a genuinely different data modality (images) and model
+  family (CNN) from samamba (tabular) and gcn_baseline (graph), not to be a
+  serious MNIST result.
+task_type: image-classification
+entrypoint: "plugins.mnist_cnn.plugin:MNISTCNNPlugin"
+
+default_resources:
+  partition: cse-cpu-all
+  gpus: 0
+  cpus_per_task: 2
+  mem_gb: 4
+  time_limit: "00:15:00"
+
+config_schema:
+  type: object
+  properties:
+    learning_rate:
+      type: number
+      default: 0.001
+      minimum: 0.00001
+    epochs:
+      type: integer
+      default: 3
+      minimum: 1
+    batch_size:
+      type: integer
+      default: 128
+      minimum: 1
+    max_train_samples:
+      type: integer
+      default: 10000
+      minimum: 100
+    seed:
+      type: integer
+      default: 42
+  required: [learning_rate, epochs, batch_size]

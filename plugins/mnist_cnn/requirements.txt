@@ -1,0 +1,5 @@
+# No extra dependencies beyond plugins/base/requirements.txt — MNIST is
+# parsed directly from the raw IDX format (see data.py / prepare_mnist_dataset.py)
+# rather than pulling in torchvision just for a dataset loader, matching this
+# repo's general preference for minimal per-plugin dependencies (see
+# gcn_baseline's equivalent note about avoiding torch-geometric).

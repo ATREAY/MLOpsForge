@@ -35,3 +35,4 @@ metrics) to `output_dir` so `training-service` knows what happened without parsi
 |---|---|---|
 | `samamba/` | `graph-classification` | Ethereum fraud detection — the platform's flagship workload. Model body is currently a placeholder (see its README) pending the real SAMamba architecture. |
 | `gcn_baseline/` | `node-classification` | Deliberately unrelated to SAMamba — exists solely to prove the plugin interface is model-agnostic, not shaped around one paper. |
+| `mnist_cnn/` | `image-classification` | A third, maximally-different plugin (image data, CNN, deliberately CPU-only resource declaration) — proves the interface generalizes across data modalities, not just model architectures. |
