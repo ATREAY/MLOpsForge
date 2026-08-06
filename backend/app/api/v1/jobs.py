@@ -14,6 +14,7 @@ from app.models.job import Job
 from app.models.plugin import Plugin
 from app.models.user import User
 from app.schemas.job import JobCreate, JobRead, JobStatusUpdate
+from app.services.mlflow_client import get_run_metrics
 from app.services.notifications import notify_job_terminal
 from app.services.training_client import TrainingServiceError, cancel_job, submit_job
 
@@ -36,6 +37,23 @@ def get_job(job_id: str, db: Session = Depends(get_db), current_user: User = Dep
     if job is None:
         raise HTTPException(404, "job not found")
     return job
+
+
+@router.get("/{job_id}/metrics", response_model=dict[str, float])
+def get_job_metrics(job_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Live metrics for a run, pulled straight from MLflow — not a Postgres
+    column, so this works for any finished job, not just ones promoted to the
+    model registry (see the models router for the promoted/snapshot copy)."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise HTTPException(404, "job not found")
+    if not job.mlflow_run_id:
+        raise HTTPException(409, "job has no MLflow run associated with it yet")
+
+    try:
+        return get_run_metrics(job.mlflow_run_id)
+    except Exception as exc:  # noqa: BLE001 — MLflow being unreachable is a real, expected failure mode here
+        raise HTTPException(502, f"could not fetch metrics from MLflow: {exc}") from exc
 
 
 @router.post("", response_model=JobRead, status_code=201)

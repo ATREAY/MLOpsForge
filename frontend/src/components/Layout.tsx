@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: "/experiments", label: "Experiments" },
   { to: "/training", label: "Training" },
   { to: "/models", label: "Models" },
+  { to: "/compare", label: "Compare" },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

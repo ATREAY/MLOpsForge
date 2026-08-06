@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/api/client";
 import type {
@@ -71,6 +71,30 @@ export function useJobs(refetchIntervalMs = 30000) {
     queryKey: ["jobs"],
     queryFn: () => api.get<Job[]>("/jobs"),
     refetchInterval: refetchIntervalMs,
+  });
+}
+
+// Live from MLflow (see backend's GET /jobs/{id}/metrics) — works for any
+// finished job, not just ones promoted to the model registry.
+export function useJobMetrics(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["jobs", jobId, "metrics"],
+    queryFn: () => api.get<Record<string, number>>(`/jobs/${jobId}/metrics`),
+    enabled: !!jobId,
+    staleTime: 60000, // finished jobs' metrics never change; no need to refetch aggressively
+  });
+}
+
+// Same data source as useJobMetrics, but for an arbitrary set of jobs at once
+// (the Compare page's multi-select) — useQueries rather than N calls to
+// useJobMetrics, since hooks can't be called in a loop.
+export function useJobsMetrics(jobIds: string[]) {
+  return useQueries({
+    queries: jobIds.map((jobId) => ({
+      queryKey: ["jobs", jobId, "metrics"],
+      queryFn: () => api.get<Record<string, number>>(`/jobs/${jobId}/metrics`),
+      staleTime: 60000,
+    })),
   });
 }
 

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { getToken } from "@/api/client";
 import { Layout } from "@/components/Layout";
+import ComparePage from "@/pages/ComparePage";
 import DashboardPage from "@/pages/DashboardPage";
 import DatasetsPage from "@/pages/DatasetsPage";
 import ExperimentsPage from "@/pages/ExperimentsPage";
@@ -58,6 +59,14 @@ export default function App() {
         element={
           <RequireAuth>
             <ModelsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/compare"
+        element={
+          <RequireAuth>
+            <ComparePage />
           </RequireAuth>
         }
       />

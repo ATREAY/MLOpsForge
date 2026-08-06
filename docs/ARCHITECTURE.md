@@ -75,10 +75,10 @@ crossing machines under Docker.
 
 ### 5. `frontend/` — React dashboard
 
-Pages: Dashboard, Datasets, Experiments, Training (submit + queue view), Models (registry). Talks only to
-`backend/`'s REST API; never touches Slurm, MLflow, MinIO, or inference-service directly. An Inference page
-(try a registered model against arbitrary inputs) is not built yet — today the inference API is
-curl/script-only.
+Pages: Dashboard, Datasets, Experiments, Training (submit + queue view), Models (registry), Compare (config +
+live-MLflow-metrics comparison across finished runs). Talks only to `backend/`'s REST API; never touches Slurm,
+MLflow, MinIO, or inference-service directly. An Inference page (try a registered model against arbitrary
+inputs) is not built yet — today the inference API is curl/script-only.
 
 ### 6. Data stores
 

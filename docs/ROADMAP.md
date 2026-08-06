@@ -160,7 +160,17 @@ every item verified against real infrastructure generating real data, not mocked
 - [ ] Explainability: attention/subgraph visualization for SAMamba predictions
 - [ ] Triton Inference Server as an alternative serving backend
 - [ ] Kafka streaming ingestion for near-real-time transaction scoring
-- [ ] Multi-run comparison view in the dashboard
+- [x] Multi-run comparison view in the dashboard. New `GET /api/v1/jobs/{id}/metrics` pulls metrics live from
+      MLflow via a job's `mlflow_run_id` — works for *any* finished job, not just ones promoted to the model
+      registry (unlike the Models page's metrics, which are a Postgres snapshot taken at promotion time). The
+      Compare page lets you multi-select up to 6 finished jobs and shows config + metrics side by side in a
+      table (handles heterogeneous metric/config keys across different plugins correctly — cells show `—`
+      where a key doesn't apply), plus a single-metric bar chart (built per the dataviz skill's methodology:
+      form chosen deliberately — heterogeneous per-plugin metrics are a table's job, a single chosen metric
+      across runs is the bar chart's job; the accent color `#256abf` run through the skill's validator, not
+      eyeballed, all checks pass). **Verified against real data**: fetched real metrics for jobs across all
+      three plugins (mnist_cnn, samamba, gcn_baseline) through the new endpoint, confirmed heterogeneous
+      metric sets render correctly in the table.
 
 ## Explicitly out of scope for now
 
