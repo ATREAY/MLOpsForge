@@ -1,17 +1,30 @@
 name: samamba
-version: "0.1.0"
+version: "1.0.0"
 description: >
-  Ethereum fraud detection over per-address transaction features. Model body is
-  currently a placeholder sequence classifier — see README.md.
-task_type: graph-classification
+  The real, published SAMamba architecture (GAT structure extractor + Mamba
+  SSM long-range encoder) for transductive node classification on the
+  EPTransNet Ethereum phishing/scam graph — vendored from the thesis repo,
+  not a placeholder. See README.md for architecture notes and the
+  transductive predict() caveat.
+task_type: node-classification
 entrypoint: "plugins.samamba.plugin:SAMambaPlugin"
 
+# Needs its own conda env (mamba-ssm has compiled CUDA kernels that aren't
+# safe to add to the shared venv every other plugin's Slurm job uses) — see
+# python_bin below. training-service/app/orchestrator.py falls back to the
+# shared SLURM_PYTHON_BIN when a plugin doesn't set this.
 default_resources:
   partition: cse-gpu-all
   gpus: 1
+  # mamba-ssm/causal-conv1d's precompiled CUDA kernels don't include Pascal
+  # (sm_60) — cse-gpu-all's cse-node[009-012] are P100s and will fail at
+  # runtime with "no kernel image is available for execution on the device".
+  # Pin to A100 (confirmed working); see `sinfo -o "%N %G"` for other options.
+  gpu_type: "A100-SXM4-40GB"
   cpus_per_task: 4
-  mem_gb: 16
+  mem_gb: 24
   time_limit: "02:00:00"
+  python_bin: "/u/student/2025/cs25mtech14023/.conda/envs/samamba/bin/python"
 
 config_schema:
   type: object
@@ -22,17 +35,65 @@ config_schema:
       minimum: 0.00001
     epochs:
       type: integer
-      default: 20
+      default: 30
       minimum: 1
-    batch_size:
-      type: integer
-      default: 64
-      minimum: 1
-    hidden_dim:
+    dim_hidden:
       type: integer
       default: 64
       minimum: 8
+    num_heads:
+      type: integer
+      default: 1
+      minimum: 1
+    num_layers:
+      type: integer
+      default: 2
+      minimum: 1
+    dropout:
+      type: number
+      default: 0.1
+      minimum: 0.0
+      maximum: 0.9
+    gnn_type:
+      type: string
+      default: gat
+      enum: [gat, gcn, graphsage, gin, graph]
+    ie:
+      type: string
+      default: mamba
+      enum: [mamba, transformer]
+    se:
+      type: string
+      default: gnn
+      enum: [gnn, khopgnn]
+    k_hop:
+      type: integer
+      default: 1
+      minimum: 1
+    use_edge_attr:
+      type: boolean
+      default: true
+    edge_dim:
+      type: integer
+      default: 64
+      minimum: 8
+    global_pool:
+      type: string
+      default: mean
+      enum: [mean, add]
+    order:
+      type: string
+      default: sd
+      enum: [sd, nd]
+    n_splits:
+      type: integer
+      default: 3
+      minimum: 2
+    max_folds:
+      type: integer
+      default: 1
+      minimum: 1
     seed:
       type: integer
       default: 42
-  required: [learning_rate, epochs, batch_size]
+  required: [learning_rate, epochs]

@@ -2,7 +2,11 @@
 #SBATCH --job-name={{ job_name }}
 #SBATCH --partition={{ partition }}
 {%- if gpus and gpus|int > 0 %}
+{%- if gpu_type %}
+#SBATCH --gres=gpu:{{ gpu_type }}:{{ gpus }}
+{%- else %}
 #SBATCH --gres=gpu:{{ gpus }}
+{%- endif %}
 {%- endif %}
 #SBATCH --cpus-per-task={{ cpus_per_task }}
 #SBATCH --mem={{ mem_gb }}G

@@ -1,2 +1,18 @@
-# No extra dependencies beyond plugins/base/requirements.txt today.
-# TODO(real SAMamba): add mamba-ssm / einops / whatever the real architecture needs here.
+# This plugin does NOT install into the shared training-service venv — it
+# runs under its own conda env (see plugin.yaml's default_resources.python_bin)
+# because mamba-ssm/causal-conv1d ship compiled CUDA kernels that aren't safe
+# to add to the env every other plugin's Slurm job relies on. This file
+# documents the exact versions that env was built with (see
+# ~/Thesis/SAMamba/requirements.txt for the canonical source); it is not
+# pip-installed automatically by anything in this repo.
+numpy
+scipy
+einops
+scikit-learn==1.3.2
+networkx
+torch==2.1.0+cu118
+torch-geometric==2.6.1
+torch-scatter==2.1.2+pt21cu118
+torch-sparse==0.6.18+pt21cu118
+causal-conv1d==1.1.1
+mamba-ssm==1.1.1

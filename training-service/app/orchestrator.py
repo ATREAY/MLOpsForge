@@ -5,6 +5,7 @@ import json
 import logging
 import posixpath
 import tempfile
+import time
 from pathlib import Path
 
 import httpx
@@ -57,10 +58,21 @@ def submit_job(
             job_name=f"mlopsforge-{job_id[:8]}",
             partition=resources.get("partition", settings.SLURM_DEFAULT_PARTITION),
             gpus=resources.get("gpus", 0),
+            # Slurm's cse-gpu-all partition spans multiple physically different
+            # GPU models (A100/V100/P100) — a plugin whose CUDA extensions were
+            # only compiled for newer compute capabilities (e.g. mamba-ssm's
+            # kernels don't include Pascal/sm_60) needs to pin a specific model
+            # via plugin.yaml's default_resources.gpu_type, matching the GRES
+            # name `sinfo -o "%N %G"` reports (e.g. "A100-SXM4-40GB").
+            gpu_type=resources.get("gpu_type"),
             cpus_per_task=resources.get("cpus_per_task", 2),
             mem_gb=resources.get("mem_gb", 8),
             time_limit=resources.get("time_limit", "01:00:00"),
-            python_bin=settings.SLURM_PYTHON_BIN,
+            # Plugins needing a different environment than the shared default
+            # (different torch/CUDA build, extra deps like mamba_ssm that
+            # aren't safe to add to the env every other plugin relies on)
+            # declare their own interpreter in plugin.yaml's default_resources.
+            python_bin=resources.get("python_bin", settings.SLURM_PYTHON_BIN),
             repo_path=settings.SLURM_REPO_PATH,
             plugin_entrypoint=plugin_entrypoint,
             dataset_path=dataset_path,
@@ -114,37 +126,58 @@ def reconcile_job(store: JobStateStore, job_id: str, record: dict) -> None:
 
         if new_status == "finished":
             result_path = posixpath.join(record["output_dir"], "result.json")
-            if ssh.remote_file_exists(result_path):
-                result = json.loads(ssh.read_remote_file(result_path))
-                if "error" in result:
-                    new_status = "failed"
-                    payload = {"status": "failed", "error_message": result["error"]}
-                else:
-                    payload["checkpoint_uri"] = result["checkpoint_path"]
-                    payload["logs_uri"] = record.get("log_path")
+            # Slurm/sacct can report a job COMPLETED slightly before its last
+            # writes (result.json, and especially a large checkpoint written
+            # just before it) are visible over this same SFTP connection —
+            # observed in practice with a 32MB checkpoint. A few quick
+            # retries absorb that without it, since this method only runs on
+            # a status *change* and stored status wouldn't advance to
+            # "finished" here, silently strand the job finished-without-
+            # metrics forever (nothing would ever re-check a status that
+            # already matches).
+            result_found = ssh.remote_file_exists(result_path)
+            for _ in range(4):
+                if result_found:
+                    break
+                time.sleep(2)
+                result_found = ssh.remote_file_exists(result_path)
 
-                    if record.get("mlflow_experiment_id"):
-                        local_checkpoint = None
-                        try:
-                            with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as tmp:
-                                local_checkpoint = tmp.name
-                            ssh.fetch_file(result["checkpoint_path"], local_checkpoint)
-                            payload["mlflow_run_id"] = log_run(
-                                tracking_uri=record["mlflow_tracking_uri"],
-                                experiment_id=record["mlflow_experiment_id"],
-                                job_id=job_id,
-                                plugin_entrypoint=record["plugin_entrypoint"],
-                                config=record["config"],
-                                metrics=result["metrics"],
-                                local_checkpoint_path=local_checkpoint,
-                            )
-                        except Exception:  # noqa: BLE001 — MLflow logging failing shouldn't mark a successful job as failed
-                            logger.exception("failed to log job %s to MLflow", job_id)
-                        finally:
-                            if local_checkpoint:
-                                Path(local_checkpoint).unlink(missing_ok=True)
+            if not result_found:
+                logger.warning(
+                    "job %s: Slurm reports finished but %s isn't visible yet, will retry next poll",
+                    job_id,
+                    result_path,
+                )
+                return
+
+            result = json.loads(ssh.read_remote_file(result_path))
+            if "error" in result:
+                new_status = "failed"
+                payload = {"status": "failed", "error_message": result["error"]}
             else:
+                payload["checkpoint_uri"] = result["checkpoint_path"]
                 payload["logs_uri"] = record.get("log_path")
+
+                if record.get("mlflow_experiment_id"):
+                    local_checkpoint = None
+                    try:
+                        with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as tmp:
+                            local_checkpoint = tmp.name
+                        ssh.fetch_file(result["checkpoint_path"], local_checkpoint)
+                        payload["mlflow_run_id"] = log_run(
+                            tracking_uri=record["mlflow_tracking_uri"],
+                            experiment_id=record["mlflow_experiment_id"],
+                            job_id=job_id,
+                            plugin_entrypoint=record["plugin_entrypoint"],
+                            config=record["config"],
+                            metrics=result["metrics"],
+                            local_checkpoint_path=local_checkpoint,
+                        )
+                    except Exception:  # noqa: BLE001 — MLflow logging failing shouldn't mark a successful job as failed
+                        logger.exception("failed to log job %s to MLflow", job_id)
+                    finally:
+                        if local_checkpoint:
+                            Path(local_checkpoint).unlink(missing_ok=True)
 
     store.update(job_id, status=new_status)
     try:
