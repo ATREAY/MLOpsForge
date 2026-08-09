@@ -3,5 +3,22 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-slate-950 text-slate-100;
+}
+
+/* A dashboard this data-dense (tables, job queues, comparison views) lives or
+   dies on its scrollbars not fighting the dark theme — the default light
+   scrollbar on a near-black page reads as unfinished. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-700;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-600;
 }

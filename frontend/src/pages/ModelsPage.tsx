@@ -29,9 +29,9 @@ export default function ModelsPage() {
       <Card className="mb-6">
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Finished job</label>
+            <label className="mb-1 block text-xs font-medium text-slate-400">Finished job</label>
             <select
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
               value={jobId}
               onChange={(e) => setJobId(e.target.value)}
             >
@@ -44,9 +44,9 @@ export default function ModelsPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Model name</label>
+            <label className="mb-1 block text-xs font-medium text-slate-400">Model name</label>
             <input
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
               placeholder="samamba-ethereum-fraud-detector"
@@ -56,52 +56,54 @@ export default function ModelsPage() {
             {promote.isPending ? "Promoting…" : "Promote to registry"}
           </Button>
         </div>
-        {promote.isError && <p className="mt-2 text-sm text-red-600">{(promote.error as Error).message}</p>}
+        {promote.isError && <p className="mt-2 text-sm text-red-400">{(promote.error as Error).message}</p>}
       </Card>
 
       <Card>
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
-        {models && models.length === 0 && <p className="text-sm text-slate-500">No models registered yet.</p>}
+        {isLoading && <p className="text-sm text-slate-400">Loading…</p>}
+        {models && models.length === 0 && <p className="text-sm text-slate-400">No models registered yet.</p>}
         {models && models.length > 0 && (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
-                <th className="pb-2 font-medium">Name</th>
-                <th className="pb-2 font-medium">Version</th>
-                <th className="pb-2 font-medium">Metrics</th>
-                <th className="pb-2 font-medium">Stage</th>
-                <th className="pb-2 font-medium">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {models.map((m) => (
-                <tr key={m.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 font-medium text-slate-900">{m.name}</td>
-                  <td className="py-2 text-slate-600">v{m.version}</td>
-                  <td className="py-2 text-slate-600">
-                    {Object.entries(m.metrics)
-                      .map(([k, v]) => `${k}=${v.toFixed(3)}`)
-                      .join(", ") || "—"}
-                  </td>
-                  <td className="py-2">
-                    <select
-                      className="rounded-md border border-slate-300 px-1.5 py-1 text-xs"
-                      value={m.stage}
-                      onChange={(e) => updateStage.mutate({ modelVersionId: m.id, stage: e.target.value })}
-                    >
-                      {STAGES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>{" "}
-                    <ModelStageBadge stage={m.stage} />
-                  </td>
-                  <td className="py-2 text-slate-500">{new Date(m.created_at).toLocaleString()}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-800 text-left text-slate-500">
+                  <th className="pb-2 font-medium">Name</th>
+                  <th className="pb-2 font-medium">Version</th>
+                  <th className="pb-2 font-medium">Metrics</th>
+                  <th className="pb-2 font-medium">Stage</th>
+                  <th className="pb-2 font-medium">Created</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {models.map((m) => (
+                  <tr key={m.id} className="border-b border-slate-800/60 last:border-0">
+                    <td className="py-2 font-medium text-slate-100">{m.name}</td>
+                    <td className="py-2 font-mono text-slate-400">v{m.version}</td>
+                    <td className="py-2 font-mono text-xs text-slate-400">
+                      {Object.entries(m.metrics)
+                        .map(([k, v]) => `${k}=${v.toFixed(3)}`)
+                        .join(", ") || "—"}
+                    </td>
+                    <td className="py-2">
+                      <select
+                        className="rounded-md border border-slate-700 bg-slate-800 px-1.5 py-1 text-xs text-slate-200"
+                        value={m.stage}
+                        onChange={(e) => updateStage.mutate({ modelVersionId: m.id, stage: e.target.value })}
+                      >
+                        {STAGES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>{" "}
+                      <ModelStageBadge stage={m.stage} />
+                    </td>
+                    <td className="py-2 text-slate-500">{new Date(m.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
     </div>
