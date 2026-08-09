@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     BACKEND_CALLBACK_BASE_URL: str = "http://localhost:8000"
 
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # The deployed frontend (Vercel) is a static build with no server of its
+    # own to proxy /api through — unlike local dev's Vite proxy or Docker's
+    # nginx — so the browser calls this backend's URL directly, cross-origin,
+    # from whatever *.vercel.app origin that deployment (production or a
+    # preview build) happens to be on. A regex covers both without needing to
+    # hardcode one exact URL that changes per-deployment.
+    CORS_ORIGIN_REGEX: str | None = r"https://.*\.vercel\.app"
 
     # Fired on every job's terminal transition (finished/failed/cancelled).
     # Empty string disables notifications entirely. Deliberately generic

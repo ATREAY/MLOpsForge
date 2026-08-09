@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { getToken } from "@/api/client";
+import { getToken, getWsBaseUrl } from "@/api/client";
 import type { Job } from "@/api/types";
 
 const RECONNECT_DELAY_MS = 3000;
@@ -24,8 +24,7 @@ export function useJobsLiveUpdates() {
     let cancelled = false;
 
     function connect() {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      socket = new WebSocket(`${protocol}//${window.location.host}/api/v1/ws/jobs?token=${token}`);
+      socket = new WebSocket(`${getWsBaseUrl()}/ws/jobs?token=${token}`);
 
       socket.onmessage = (event) => {
         const job = JSON.parse(event.data) as Job;
