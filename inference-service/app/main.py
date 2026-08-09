@@ -46,6 +46,10 @@ def predict(payload: PredictRequest):
         plugin = load_plugin(payload.plugin_entrypoint)
     except (ValueError, TypeError) as exc:
         raise HTTPException(400, f"invalid plugin entrypoint: {exc}") from exc
+    except Exception as exc:  # noqa: BLE001 — a plugin whose deps aren't installed here (e.g. samamba's
+        # torch_geometric/mamba_ssm not being in this service's shared venv) must surface as a clear 422,
+        # not fall through to FastAPI's generic unhandled-500
+        raise HTTPException(422, f"failed to load plugin '{payload.plugin_entrypoint}': {exc}") from exc
 
     start = time.perf_counter()
     try:

@@ -84,3 +84,13 @@ export interface ModelVersion {
   stage: ModelStage;
   created_at: string;
 }
+
+export interface PredictRequest {
+  inputs: unknown;
+}
+
+export interface PredictResponse {
+  model_version_id: string;
+  model_name: string;
+  prediction: unknown;
+}

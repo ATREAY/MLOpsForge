@@ -7,6 +7,7 @@ import ComparePage from "@/pages/ComparePage";
 import DashboardPage from "@/pages/DashboardPage";
 import DatasetsPage from "@/pages/DatasetsPage";
 import ExperimentsPage from "@/pages/ExperimentsPage";
+import InferencePlaygroundPage from "@/pages/InferencePlaygroundPage";
 import LoginPage from "@/pages/LoginPage";
 import ModelsPage from "@/pages/ModelsPage";
 import RegisterPage from "@/pages/RegisterPage";
@@ -67,6 +68,14 @@ export default function App() {
         element={
           <RequireAuth>
             <ComparePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/inference"
+        element={
+          <RequireAuth>
+            <InferencePlaygroundPage />
           </RequireAuth>
         }
       />

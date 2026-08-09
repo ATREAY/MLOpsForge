@@ -9,6 +9,7 @@ import type {
   Job,
   ModelVersion,
   Plugin,
+  PredictResponse,
 } from "@/api/types";
 
 // -- Datasets ---------------------------------------------------------------
@@ -130,6 +131,14 @@ export function useModelVersions(name?: string) {
   });
 }
 
+export function useModelVersion(id: string | undefined) {
+  return useQuery({
+    queryKey: ["models", id],
+    queryFn: () => api.get<ModelVersion>(`/models/${id}`),
+    enabled: !!id,
+  });
+}
+
 export function usePromoteJobToModel() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -145,6 +154,15 @@ export function useUpdateModelStage() {
     mutationFn: ({ modelVersionId, stage }: { modelVersionId: string; stage: string }) =>
       api.patch<ModelVersion>(`/models/${modelVersionId}/stage`, { stage }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["models"] }),
+  });
+}
+
+// -- Inference ----------------------------------------------------------------
+
+export function usePredict() {
+  return useMutation({
+    mutationFn: ({ modelVersionId, inputs }: { modelVersionId: string; inputs: unknown }) =>
+      api.post<PredictResponse>(`/inference/predict/${modelVersionId}`, { inputs }),
   });
 }
 
