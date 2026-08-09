@@ -7,7 +7,8 @@ it's the fastest way to answer "what's actually done" in a future session or an 
 
 - [x] Repo scaffold, architecture docs
 - [x] Backend core: FastAPI skeleton, config, SQLAlchemy models, Alembic migration for initial schema
-- [x] `BaseModelPlugin` interface + plugin registry + `plugins/samamba` (placeholder model body, real lifecycle) +
+- [x] `BaseModelPlugin` interface + plugin registry + `plugins/samamba` (placeholder model body at the time,
+      real lifecycle — replaced with the real published architecture in Phase 3, see below) +
       `plugins/gcn_baseline` (proves the interface is model-agnostic) — both verified end-to-end via `run_train.py`
 - [x] Dataset Manager: dataset/version CRUD + presigned-upload API (backend), versioned in Postgres, files
       staged for MinIO, plus `scripts/register_dataset.py` for onboarding a real dataset — verified end-to-end
@@ -157,6 +158,63 @@ every item verified against real infrastructure generating real data, not mocked
       here, so a 0-GPU request can still land on GPU hardware — the resource *request* was correctly honored,
       but device *isolation* isn't strictly enforced for non-GPU jobs on this cluster (see
       `plugins/mnist_cnn/README.md`).
+- [x] Real SAMamba architecture (replacing the Phase 1 placeholder MLP). Vendored the actual published model
+      unmodified from the thesis repo (`plugins/samamba/samamba_core/` — `GraphEncoder`, GAT structure
+      extractor, and the real `mamba_ssm.Mamba` SSM encoder layers with compiled CUDA kernels, not a
+      reimplementation) and wired it into `BaseModelPlugin` against the real EPTransNet phishing/scam graph
+      (30k Ethereum addresses, ~1.27M transaction edges, prepared via `scripts/prepare_samamba_dataset.py`
+      into a single registrable file). Needed two new pieces of platform infrastructure to get there, both
+      general (not samamba-specific hacks):
+      - **Per-plugin Python interpreter override** (`plugin.yaml` → `default_resources.python_bin`,
+        `training-service/app/orchestrator.py`) — `mamba-ssm`/`causal-conv1d` ship compiled CUDA kernels that
+        don't belong in the shared venv every other plugin's Slurm job uses, so samamba declares its own conda
+        env's interpreter; the other three plugins are unaffected (fall back to the existing shared
+        `SLURM_PYTHON_BIN`).
+      - **Per-plugin GPU model pinning** (`plugin.yaml` → `default_resources.gpu_type`,
+        `train_job.sh.j2`/`orchestrator.py`) — discovered live that `cse-gpu-all` spans physically different
+        GPUs (A100/V100/P100), and `mamba-ssm`'s precompiled kernels don't include Pascal (sm_60): the first
+        real submission landed on a P100 node and failed with `no kernel image is available for execution on
+        the device`. Fixed by adding a `--gres=gpu:<type>:<n>` template path plugins can opt into, pinned
+        samamba to `A100-SXM4-40GB`.
+
+      **Verified against real infrastructure, scaled-down run (1 of 3 k-folds, 15 epochs vs. the paper's
+      3×-repeated 3-fold / 1000-epoch protocol — `max_folds`/`n_splits`/`epochs` are config knobs, so the full
+      protocol is one config change away at real compute cost, not a code change)**: local smoke test first
+      (train/evaluate/predict against real data with the `transformer` encoder variant, CPU-only, to validate
+      the wrapper logic cheaply before spending GPU time), then the full platform path — registered the
+      dataset, submitted through the real API with `ie: mamba` (the actual SSM encoder), ran as real Slurm job
+      `33731` on `dgx-a100-02`, finished with `trained_on_device: 1.0`, logged to a real MLflow run, promoted
+      to the registry as `samamba-eptransnet-real-arch` v1. Metrics from this scaled-down run are honestly
+      weak (F1 0.023, precision 0.012, recall 0.754 — expected: 1 fold, 15 epochs, and a ~1.2% positive class
+      on a model whose published results come from 1000-epoch/3-fold-repeated training) — the point of this
+      run was proving the real architecture trains end-to-end on real infrastructure, not reproducing the
+      paper's numbers on a demo budget.
+
+      This run also caught and fixed a second real platform bug: training-service's reconciler only re-checks
+      a job on a Slurm state *change*, and for this job's 32MB checkpoint, Slurm reported `COMPLETED` slightly
+      before `result.json`/the checkpoint were visible over the same SFTP connection — the job got marked
+      `finished` with no checkpoint/MLflow data and would never have retried. Fixed with a bounded retry
+      (`orchestrator.py::reconcile_job`) that waits for `result.json` to actually appear before finalizing a
+      "finished" transition, rather than either blocking forever or silently dropping the result.
+
+      **Known, honestly-documented gap**: `inference-service` cannot currently serve real `samamba`
+      predictions — confirmed live with a real 502 (`ModuleNotFoundError: torch_geometric`), since unlike
+      training-service it imports plugin code in-process rather than per-plugin-interpreter, and even with
+      the import fixed, `mamba-ssm`'s kernels need CUDA, which that (deliberately non-GPU) control-plane
+      service doesn't have. `predict()`/`evaluate()` themselves are verified correct directly against real
+      checkpoints — both the CPU smoke test (`transformer` variant) and, separately, a real standalone GPU
+      job that reloaded the actual trained `ie=mamba` checkpoint on `dgx-a100-02` and ran a real forward pass:
+      correct output shape (30000, 2), 0.5s once past cold-start imports (see below). See
+      `plugins/samamba/README.md` and `inference-service/README.md` for the full writeup and what a real fix
+      for inference-service would require.
+
+      One more honestly-surfaced finding from that GPU verification: cold-starting `torch` +
+      `torch_geometric` + `mamba_ssm`/`causal_conv1d` from this conda env, over this cluster's NFS mount,
+      took ~580s (~10 minutes) before any actual computation began — an environmental characteristic of this
+      dev setup (see `docs/ENVIRONMENT.md`), not a code issue. It's why the first standalone verification
+      attempt (10-minute time limit) timed out with zero output despite doing nothing wrong: everything after
+      imports — checkpoint load, model reconstruction, and the real Mamba forward pass — took about 1.5s
+      total once the imports actually finished.
 - [ ] Explainability: attention/subgraph visualization for SAMamba predictions
 - [ ] Triton Inference Server as an alternative serving backend — skipped deliberately: Triton only ships as a
       Docker image or a heavy from-source build, neither buildable/verifiable in this Docker-less dev
