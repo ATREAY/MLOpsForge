@@ -11,7 +11,7 @@ link shows a login page that never loads past that, the tunnel isn't running at 
 [Known Limitations](#known-limitations).
 
 Every capability described in this README is backed by an actual run against real infrastructure, a real
-Slurm HPC cluster, a real MLflow server, real Prometheus/Grafana, a real Kafka broker — not a mock or a script
+Slurm HPC cluster, a real MLflow server, real Prometheus/Grafana, a real Kafka broker not a mock or a script
 that was written but never executed. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full, dated verification
 history, including the real bugs found and fixed along the way.
 
@@ -33,12 +33,12 @@ image classifier) through the exact same pipeline, which is the whole point.
 
 MLOpsForge is split into a **control plane** (stateless-ish services you run anywhere with Docker) and a
 **compute plane** (a Slurm HPC cluster, reached over SSH). This mirrors how real organizations run a cloud/
-on-prem control plane against an HPC GPU cluster they don't fully control — it's also a hard constraint of the
+on-prem control plane against an HPC GPU cluster they don't fully control it's also a hard constraint of the
 dev environment this was built in (see [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)).
 
 ```mermaid
 flowchart TB
-    subgraph CP["CONTROL PLANE — Docker, runs anywhere"]
+    subgraph CP["CONTROL PLANE - Docker, runs anywhere"]
         FE["React Dashboard<br/>Training · Models · Inference Playground · Compare"]
         BE["FastAPI Gateway (backend/)<br/>auth · datasets · jobs · models · inference · metrics"]
         TS["training-service<br/>Slurm SSH orchestration"]
@@ -63,7 +63,7 @@ flowchart TB
         KAFKA -.-> IS
     end
 
-    subgraph COMPUTE["COMPUTE PLANE — Slurm HPC cluster"]
+    subgraph COMPUTE["COMPUTE PLANE - Slurm HPC cluster"]
         LOGIN["login node<br/>sbatch job.sh"]
         SCHED["Slurm scheduler"]
         GPUNODE["GPU node (A100 / V100 / P100)<br/>runs a registered BaseModelPlugin"]
@@ -87,7 +87,7 @@ data flows: [`docs/SystemDesign.md`](docs/SystemDesign.md).
 
 ## Demo Video
 
-> _TODO: 3–5 minute walkthrough — Login → Register Dataset → Create Experiment → Submit Training → watch the
+> _TODO: 3–5 minute walkthrough - Login → Register Dataset → Create Experiment → Submit Training → watch the
 > real Slurm job → MLflow run → Model Registry → Inference Playground → Compare Runs → Grafana dashboard.
 > Upload to YouTube, then embed here:_
 >
@@ -108,7 +108,7 @@ data flows: [`docs/SystemDesign.md`](docs/SystemDesign.md).
   - `gcn_baseline` - a from-scratch GCN on the Cora citation network
   - `mnist_cnn` - a CNN on MNIST, deliberately CPU-only to prove the platform honors heterogeneous
     per-plugin resource requests, not just "always ask for a GPU"
-- **Real Slurm HPC orchestration** — SSH (paramiko) to a login node, templated `sbatch` scripts, `squeue`/
+- **Real Slurm HPC orchestration** - SSH (paramiko) to a login node, templated `sbatch` scripts, `squeue`/
   `sacct` polling, checkpoints pulled back over SFTP. Per-plugin resource overrides including a dedicated
   Python interpreter and GPU model pinning (see [Slurm Architecture](#slurm-architecture)).
 - **Experiment tracking & model registry** via MLflow, with a promotion workflow (`none → staging →
@@ -118,7 +118,7 @@ data flows: [`docs/SystemDesign.md`](docs/SystemDesign.md).
 - **Monitoring** - hand-rolled Prometheus metrics (`mlopsforge_job_queue_depth`, `mlopsforge_job_duration_seconds`,
   `mlopsforge_inference_latency_seconds`, ...) and a provisioned Grafana dashboard, not a generic
   auto-instrumentation firehose.
-- **Live job status** over WebSocket, with a polling fallback — no manual refresh to watch a job progress.
+- **Live job status** over WebSocket, with a polling fallback - no manual refresh to watch a job progress.
 - **Streaming inference demo** - a Kafka producer/consumer pair scores real transactions through the actual
   authenticated inference API, proving the path is fast enough for near-real-time use (39–163ms/transaction,
   measured).
@@ -157,7 +157,7 @@ POST /api/v1/jobs {plugin: "samamba", dataset_version_id: 7, config: {...}}
 
 ## Plugin Architecture
 
-The platform never imports a model-specific module — everything it knows about any given model comes through
+The platform never imports a model-specific module - everything it knows about any given model comes through
 one contract, [`plugins/base/interface.py`](plugins/base/interface.py):
 
 ```python
@@ -172,7 +172,7 @@ class BaseModelPlugin(ABC):
     def predict(self, model_path: str, inputs: Any) -> Any: ...
 ```
 
-Adding a new model means adding a new plugin directory — zero changes to `backend/` or `training-service/`.
+Adding a new model means adding a new plugin directory zero changes to `backend/` or `training-service/`.
 Each plugin ships its own `plugin.yaml` (config schema + default Slurm resources) and is loaded dynamically at
 runtime via `plugins.base.registry.load_plugin(entrypoint)`, never imported directly by name. This is why the
 platform could absorb a workload as different as SAMamba (a real research architecture with its own CUDA
@@ -197,7 +197,7 @@ plugin can use them, not just samamba:
   the environment every other plugin's job relies on.
 - **`gpu_type`** - a plugin can pin a specific GPU model (`--gres=gpu:<type>:<n>`), instead of whatever the
   partition happens to schedule. Needed because this cluster's `cse-gpu-all` partition spans physically
-  different GPUs (A100/V100/P100), and `mamba-ssm`'s precompiled kernels don't include Pascal (sm_60) — the
+  different GPUs (A100/V100/P100), and `mamba-ssm`'s precompiled kernels don't include Pascal (sm_60) the
   first real submission landed on a P100 and failed with `no kernel image is available for execution on the
   device` before this was added.
 
@@ -219,7 +219,7 @@ checkpoint or metrics.
 | Streaming             | Apache Kafka (KRaft mode) |
 | Monitoring            | Prometheus + Grafana |
 | Inference             | FastAPI + Torch |
-| Containerization      | Docker Compose (control plane only — compute plane is bare-metal Slurm) |
+| Containerization      | Docker Compose (control plane only compute plane is bare-metal Slurm) |
 
 ### Capabilities at a glance
 
@@ -248,7 +248,7 @@ MLOpsForge/
 ├── training-service/   Slurm orchestration: job templates, SSH client, sbatch/squeue/sacct polling
 ├── inference-service/  Loads a registered model via its plugin and serves predictions over REST
 ├── streaming-service/  Kafka producer/consumer demo: near-real-time transaction scoring via the inference API
-├── sdk/                Python client SDK — how a plugin author or script talks to the platform
+├── sdk/                Python client SDK how a plugin author or script talks to the platform
 ├── frontend/           React + TypeScript dashboard, including the Inference Playground
 ├── infra/              docker-compose stack: Postgres, Redis, Kafka, MLflow, MinIO, backend, Prometheus, Grafana
 ├── scripts/            Dataset prep + onboarding scripts (Cora, MNIST, the real EPTransNet graph, ...)
@@ -264,13 +264,13 @@ Documented rather than hidden - see the linked READMEs for the full detail on ea
   file wires together *is* verified individually as a bare process - see [`infra/README.md`](infra/README.md).
 - **`inference-service` can't yet serve real SAMamba predictions.** Its shared venv lacks `torch_geometric`,
   and the real Mamba kernels need CUDA even at inference time, which that (deliberately non-GPU) control-plane
-  service doesn't have. `plugin.predict()` itself is verified correct directly against real checkpoints — see
+  service doesn't have. `plugin.predict()` itself is verified correct directly against real checkpoints see
   [`inference-service/README.md`](inference-service/README.md).
 - **Triton Inference Server was deliberately not built.** Docker-only distribution, unverifiable in this
-  Docker-less dev environment — writing the integration without being able to run it would just be more
+  Docker-less dev environment writing the integration without being able to run it would just be more
   "written, not verified" surface area.
 - **Redis is declared but unused.** The originally-planned job-status pub/sub ended up built differently (an
-  in-process WebSocket broadcast, correct for today's single-process deployment) — see `docs/ARCHITECTURE.md`.
+  in-process WebSocket broadcast, correct for today's single-process deployment) see `docs/ARCHITECTURE.md`.
 
 ## Future Work
 
@@ -285,4 +285,4 @@ Documented rather than hidden - see the linked READMEs for the full detail on ea
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
