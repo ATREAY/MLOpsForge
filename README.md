@@ -1,16 +1,16 @@
 # MLOpsForge
 
-**A model-agnostic ML infrastructure platform** — train, track, register, deploy, and monitor any PyTorch model
+**A model-agnostic ML infrastructure platform** - train, track, register, deploy, and monitor any PyTorch model
 on a Slurm/HPC GPU cluster, controlled entirely from a web dashboard.
 
 > "I built reusable ML infrastructure. SAMamba is one of the supported workloads used to demonstrate it."
 
-**[🔗 Live demo](https://frontend-pi-gilt-10.vercel.app)** — a real, running deployment, not a screenshot. The
+**[🔗 Live demo](https://frontend-pi-gilt-10.vercel.app)** - a real, running deployment, not a screenshot. The
 backend lives on a university HPC cluster reached through a tunnel that's only up while actively demoed; if the
-link shows a login page that never loads past that, the tunnel isn't running at that moment — see
+link shows a login page that never loads past that, the tunnel isn't running at that moment - see
 [Known Limitations](#known-limitations).
 
-Every capability described in this README is backed by an actual run against real infrastructure — a real
+Every capability described in this README is backed by an actual run against real infrastructure, a real
 Slurm HPC cluster, a real MLflow server, real Prometheus/Grafana, a real Kafka broker — not a mock or a script
 that was written but never executed. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full, dated verification
 history, including the real bugs found and fixed along the way.
@@ -18,14 +18,14 @@ history, including the real bugs found and fixed along the way.
 ## In plain English
 
 Most student ML projects look like a single script: load a dataset, train one model, print an accuracy number.
-This is a different kind of project — it's the **infrastructure a real ML platform team builds around many
+This is a different kind of project it's the **infrastructure a real ML platform team builds around many
 models**, not a model itself. Concretely: a web dashboard where you register a dataset, click "submit training
 job," and that job actually runs on a shared university GPU cluster through the same scheduler (Slurm) real
-HPC centers use — not your laptop, not a rented cloud GPU. Every run gets tracked (what config, what metrics,
+HPC centers use not your laptop, not a rented cloud GPU. Every run gets tracked (what config, what metrics,
 what checkpoint), trained models get versioned and can be promoted to "production," and you can then get live
 predictions out of any of them from the same dashboard. It's the same *shape* of system as things like AWS
 SageMaker or Google Vertex AI, built from scratch to understand how those systems actually work under the
-hood — and it's deliberately **model-agnostic**: it doesn't just run one model, it runs three genuinely
+hood and it's deliberately **model-agnostic**: it doesn't just run one model, it runs three genuinely
 different ones (a real published graph/AI-research architecture called SAMamba, a from-scratch GNN, and an
 image classifier) through the exact same pipeline, which is the whole point.
 
@@ -80,7 +80,7 @@ data flows: [`docs/SystemDesign.md`](docs/SystemDesign.md).
 ## GIF
 
 > _TODO: a ~15s looping GIF of the golden path (submit a job → watch it go QUEUED → RUNNING → FINISHED →
-> appears in Models) is the highest-value thing to add here — it's what a reader sees before they decide
+> appears in Models) is the highest-value thing to add here it's what a reader sees before they decide
 > whether to keep scrolling. Record a screen capture of the Training page, trim to the state transitions, and
 > convert with something like `ffmpeg -i demo.mov -vf "fps=12,scale=960:-1" docs/media/demo.gif`, then embed
 > it right here with `![demo](docs/media/demo.gif)`._
@@ -95,42 +95,42 @@ data flows: [`docs/SystemDesign.md`](docs/SystemDesign.md).
 
 ## Screenshots
 
-> _TODO: 3–4 screenshots that carry the most signal — the Training page mid-job, a real Grafana dashboard with
+> _TODO: 3–4 screenshots that carry the most signal the Training page mid-job, a real Grafana dashboard with
 > live data, the Inference Playground's digit canvas + prediction, and the Compare page. Save under
 > `docs/media/` and embed with `![Training page](docs/media/training.png)`._
 
 ## Features
 
-- **Model-agnostic training** — any PyTorch model that implements `BaseModelPlugin` gets Slurm submission,
+- **Model-agnostic training** - any PyTorch model that implements `BaseModelPlugin` gets Slurm submission,
   MLflow tracking, and a registry entry for free. Proven with three structurally different plugins, not one:
-  - `samamba` — the real, published SAMamba architecture (GAT + Mamba SSM), transductive graph node
+  - `samamba` - the real, published SAMamba architecture (GAT + Mamba SSM), transductive graph node
     classification on a 30k-node / 1.27M-edge Ethereum phishing/scam graph
-  - `gcn_baseline` — a from-scratch GCN on the Cora citation network
-  - `mnist_cnn` — a CNN on MNIST, deliberately CPU-only to prove the platform honors heterogeneous
+  - `gcn_baseline` - a from-scratch GCN on the Cora citation network
+  - `mnist_cnn` - a CNN on MNIST, deliberately CPU-only to prove the platform honors heterogeneous
     per-plugin resource requests, not just "always ask for a GPU"
 - **Real Slurm HPC orchestration** — SSH (paramiko) to a login node, templated `sbatch` scripts, `squeue`/
   `sacct` polling, checkpoints pulled back over SFTP. Per-plugin resource overrides including a dedicated
   Python interpreter and GPU model pinning (see [Slurm Architecture](#slurm-architecture)).
 - **Experiment tracking & model registry** via MLflow, with a promotion workflow (`none → staging →
   production → archived`) layered on top.
-- **Live Inference Playground** — pick a registered model, feed it real input (including a drawable canvas for
+- **Live Inference Playground** - pick a registered model, feed it real input (including a drawable canvas for
   the digit classifier), get a real prediction back from `inference-service`.
-- **Monitoring** — hand-rolled Prometheus metrics (`mlopsforge_job_queue_depth`, `mlopsforge_job_duration_seconds`,
+- **Monitoring** - hand-rolled Prometheus metrics (`mlopsforge_job_queue_depth`, `mlopsforge_job_duration_seconds`,
   `mlopsforge_inference_latency_seconds`, ...) and a provisioned Grafana dashboard, not a generic
   auto-instrumentation firehose.
 - **Live job status** over WebSocket, with a polling fallback — no manual refresh to watch a job progress.
-- **Streaming inference demo** — a Kafka producer/consumer pair scores real transactions through the actual
+- **Streaming inference demo** - a Kafka producer/consumer pair scores real transactions through the actual
   authenticated inference API, proving the path is fast enough for near-real-time use (39–163ms/transaction,
   measured).
-- **Multi-run comparison** — select any finished jobs across different plugins and compare config + live
+- **Multi-run comparison** - select any finished jobs across different plugins and compare config + live
   MLflow metrics side by side, even with heterogeneous metric keys.
-- **Auth** — JWT-based, every route gated except health/auth/the internal Slurm status callback.
+- **Auth** - JWT-based, every route gated except health/auth/the internal Slurm status callback.
 
 ## System Design
 
-The full design document — problem statement, requirements, training/inference flow diagrams, and the
+The full design document - problem statement, requirements, training/inference flow diagrams, and the
 reasoning behind every major technology choice (why plugins, why MLflow, why Slurm, why FastAPI, why Kafka,
-why per-plugin conda environments) — lives in [`docs/SystemDesign.md`](docs/SystemDesign.md). The two flows
+why per-plugin conda environments) lives in [`docs/SystemDesign.md`](docs/SystemDesign.md). The two flows
 that matter most:
 
 **Training**: `Frontend → Backend → training-service → Slurm → GPU node → MLflow → Model Registry`
@@ -181,7 +181,7 @@ extensions) without touching a single line of `backend/` or `training-service/` 
 ## Slurm Architecture
 
 `training-service` is the one place SSH credentials to the HPC cluster live (`training-service/app/slurm_client.py`),
-using a dedicated keypair — never a personal one. Given a job request, it:
+using a dedicated keypair, never a personal one. Given a job request, it:
 
 1. Looks up the plugin's entrypoint and Slurm resource defaults (`plugins/<name>/plugin.yaml`)
 2. Renders a job script from a Jinja2 template (`training-service/slurm_templates/train_job.sh.j2`)
@@ -189,13 +189,13 @@ using a dedicated keypair — never a personal one. Given a job request, it:
 4. Polls `squeue`/`sacct` to track `QUEUED → RUNNING → FINISHED | FAILED | CANCELLED`
 5. On completion, SFTPs checkpoints/logs back and writes final metrics into MLflow
 
-Two resource overrides exist because the real SAMamba plugin needed them, and both are general — any future
+Two resource overrides exist because the real SAMamba plugin needed them, and both are general, any future
 plugin can use them, not just samamba:
 
-- **`python_bin`** — a plugin can declare its own Python interpreter (e.g. a dedicated conda env), instead of
+- **`python_bin`** - a plugin can declare its own Python interpreter (e.g. a dedicated conda env), instead of
   the shared training-service venv. Needed because `mamba-ssm`'s compiled CUDA kernels shouldn't be forced into
   the environment every other plugin's job relies on.
-- **`gpu_type`** — a plugin can pin a specific GPU model (`--gres=gpu:<type>:<n>`), instead of whatever the
+- **`gpu_type`** - a plugin can pin a specific GPU model (`--gres=gpu:<type>:<n>`), instead of whatever the
   partition happens to schedule. Needed because this cluster's `cse-gpu-all` partition spans physically
   different GPUs (A100/V100/P100), and `mamba-ssm`'s precompiled kernels don't include Pascal (sm_60) — the
   first real submission landed on a P100 and failed with `no kernel image is available for execution on the
@@ -258,10 +258,10 @@ MLOpsForge/
 
 ## Known Limitations
 
-Documented rather than hidden — see the linked READMEs for the full detail on each:
+Documented rather than hidden - see the linked READMEs for the full detail on each:
 
 - **`docker compose up` is written but unrun.** No Docker in this dev environment. Every service the compose
-  file wires together *is* verified individually as a bare process — see [`infra/README.md`](infra/README.md).
+  file wires together *is* verified individually as a bare process - see [`infra/README.md`](infra/README.md).
 - **`inference-service` can't yet serve real SAMamba predictions.** Its shared venv lacks `torch_geometric`,
   and the real Mamba kernels need CUDA even at inference time, which that (deliberately non-GPU) control-plane
   service doesn't have. `plugin.predict()` itself is verified correct directly against real checkpoints — see
@@ -274,13 +274,13 @@ Documented rather than hidden — see the linked READMEs for the full detail on 
 
 ## Future Work
 
-- **Explainability** — attention/subgraph visualization for SAMamba predictions.
-- **GPU-backed inference for real Mamba checkpoints** — either a subprocess-per-plugin-interpreter redesign
+- **Explainability** - attention/subgraph visualization for SAMamba predictions.
+- **GPU-backed inference for real Mamba checkpoints** - either a subprocess-per-plugin-interpreter redesign
   for `inference-service` (mirroring what `training-service` already has), or a small GPU-backed inference
   deployment, to close the known limitation above.
-- **`docker compose up` verification** — the moment this runs on a machine with Docker, this becomes the
+- **`docker compose up` verification** - the moment this runs on a machine with Docker, this becomes the
   natural way to hand the repo to someone else.
-- **Full SAMamba protocol run** — `max_folds`/`n_splits`/`epochs` are already config knobs; reproducing the
+- **Full SAMamba protocol run** - `max_folds`/`n_splits`/`epochs` are already config knobs; reproducing the
   paper's full 3×-repeated 3-fold / 1000-epoch protocol is one config change away, at real compute cost.
 
 ## License
