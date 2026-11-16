@@ -5,10 +5,10 @@ on a Slurm/HPC GPU cluster, controlled entirely from a web dashboard.
 
 > "I built reusable ML infrastructure. SAMamba is one of the supported workloads used to demonstrate it."
 
-**[🔗 Live demo](https://frontend-pi-gilt-10.vercel.app)** - a real, running deployment, not a screenshot. The
+<!-- **[🔗 Live demo](https://frontend-pi-gilt-10.vercel.app)** - a real, running deployment, not a screenshot. The
 backend lives on a university HPC cluster reached through a tunnel that's only up while actively demoed; if the
 link shows a login page that never loads past that, the tunnel isn't running at that moment - see
-[Known Limitations](#known-limitations).
+[Known Limitations](#known-limitations). -->
 
 Every capability described in this README is backed by an actual run against real infrastructure, a real
 Slurm HPC cluster, a real MLflow server, real Prometheus/Grafana, a real Kafka broker not a mock or a script
